@@ -67,6 +67,27 @@ class JapaneseDocsTests(unittest.TestCase):
             self.assertEqual([], report["missing_docs"])
             self.assertIn(".", report["unfilled_docs"])
 
+    def test_audit_docs_detects_partially_completed_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / jp_docs.DOC_FILE_NAME).write_text(
+                "\n".join(
+                    [
+                        "- [x] 目的と背景: 完了",
+                        "- [x] 主要ロジックの説明: 完了",
+                        "- [ ] 入出力と副作用: TODO_AI",
+                        "- [ ] テスト観点: TODO_AI",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            report = jp_docs.audit_docs(root)
+
+            self.assertEqual("needs_attention", report["status"])
+            self.assertEqual([], report["missing_docs"])
+            self.assertIn(".", report["unfilled_docs"])
+
 
 if __name__ == "__main__":
     unittest.main()
