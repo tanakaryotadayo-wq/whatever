@@ -116,7 +116,7 @@ def audit_docs(root: Path, doc_file_name: str = DOC_FILE_NAME) -> dict:
             continue
 
         all_required_checked = all(
-            re.search(rf"-\s*\[x\]\s*{re.escape(field)}\s*:?", content)
+            re.search(rf"-\s*\[x\]\s*{re.escape(field)}\s*:", content)
             for field in REQUIRED_FIELDS
         )
         if "TODO_AI" in content or not all_required_checked:

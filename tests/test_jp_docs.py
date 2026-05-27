@@ -46,7 +46,7 @@ class JapaneseDocsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / jp_docs.DOC_FILE_NAME).write_text(
-                "- [x] 目的と背景: 完了\n- [x] 主要ロジックの説明: 完了\nTODO_AI\n",
+                "- [x] 目的と背景: 完了\n- [x] 主要ロジックの説明: 完了\n- [x] 入出力と副作用: TODO_AI\n- [x] テスト観点: 完了\n",
                 encoding="utf-8",
             )
 
