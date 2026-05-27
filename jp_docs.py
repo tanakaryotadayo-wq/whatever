@@ -62,7 +62,7 @@ def render_doc(summary: DirSummary) -> str:
         f"{code_lines}\n\n"
         "## AI記入必須（コードに応じて説明を埋める）\n"
         f"{required_lines}\n\n"
-        "## AI誤魔化し可視化ルール\n"
+        "## AI記入状況可視化ルール\n"
         "- `TODO_AI` が残っている場合は未記入扱い\n"
         "- チェックボックスが `- [ ]` のままなら未完了扱い\n"
     )

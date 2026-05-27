@@ -11,4 +11,4 @@ python jp_docs.py audit --root . --strict
 ```
 
 - `generate`: 各フォルダに `AI_DOCS.ja.md` を生成します。
-- `audit`: `TODO_AI` や `- [ ]` を検出して、AIの未記入・ごまかしを可視化します。
+- `audit`: `TODO_AI` や `- [ ]` を検出して、AIの未記入・記入状況を可視化します。
