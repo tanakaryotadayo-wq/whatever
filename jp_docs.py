@@ -21,7 +21,7 @@ REQUIRED_FIELDS = [
 ]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class DirSummary:
     rel_dir: str
     files: list[str]
@@ -35,12 +35,13 @@ def collect_target_dirs(root: Path) -> Iterable[Path]:
 
 
 def summarize_dir(root: Path, directory: Path, doc_file_name: str) -> DirSummary:
-    entries = sorted(
-        p.name
+    visible_entries = [
+        p
         for p in directory.iterdir()
         if not p.name.startswith(".") and p.name not in {doc_file_name, "__pycache__"}
-    )
-    code_files = [name for name in entries if Path(name).suffix in CODE_EXTENSIONS]
+    ]
+    entries = sorted(p.name for p in visible_entries)
+    code_files = sorted(p.name for p in visible_entries if p.suffix in CODE_EXTENSIONS)
     rel = "." if directory == root else str(directory.relative_to(root))
     return DirSummary(rel_dir=rel, files=entries, code_files=code_files)
 
@@ -92,7 +93,10 @@ def audit_docs(root: Path, doc_file_name: str = DOC_FILE_NAME) -> dict:
             continue
 
         content = target.read_text(encoding="utf-8")
-        if "TODO_AI" in content or "- [ ]" in content:
+        has_unfilled_required = any(
+            f"- [ ] {field}:" in content for field in REQUIRED_FIELDS
+        )
+        if "TODO_AI" in content or has_unfilled_required:
             unfilled_docs.append(rel)
 
     status = "ok" if not missing_docs and not unfilled_docs else "needs_attention"
