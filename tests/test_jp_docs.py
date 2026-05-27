@@ -24,7 +24,17 @@ class JapaneseDocsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "pkg").mkdir()
-            (root / jp_docs.DOC_FILE_NAME).write_text("- [x] 目的\n", encoding="utf-8")
+            (root / jp_docs.DOC_FILE_NAME).write_text(
+                "\n".join(
+                    [
+                        "- [x] 目的と背景: 完了",
+                        "- [x] 主要ロジックの説明: 完了",
+                        "- [x] 入出力と副作用: 完了",
+                        "- [x] テスト観点: 完了",
+                    ]
+                ),
+                encoding="utf-8",
+            )
 
             report = jp_docs.audit_docs(root)
 
@@ -39,6 +49,17 @@ class JapaneseDocsTests(unittest.TestCase):
                 "- [x] 目的と背景: 完了\n- [x] 主要ロジックの説明: 完了\nTODO_AI\n",
                 encoding="utf-8",
             )
+
+            report = jp_docs.audit_docs(root)
+
+            self.assertEqual("needs_attention", report["status"])
+            self.assertEqual([], report["missing_docs"])
+            self.assertIn(".", report["unfilled_docs"])
+
+    def test_audit_docs_detects_empty_doc_as_unfilled(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / jp_docs.DOC_FILE_NAME).write_text("   \n", encoding="utf-8")
 
             report = jp_docs.audit_docs(root)
 

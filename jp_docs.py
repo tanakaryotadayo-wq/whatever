@@ -11,7 +11,24 @@ from pathlib import Path
 from typing import Iterable
 
 DOC_FILE_NAME = "AI_DOCS.ja.md"
-CODE_EXTENSIONS = {".py", ".js", ".ts", ".tsx", ".jsx", ".go", ".rs", ".java", ".rb", ".php", ".c", ".cc", ".cpp", ".h", ".hpp", ".cs"}
+CODE_EXTENSIONS = {
+    ".py",
+    ".js",
+    ".ts",
+    ".tsx",
+    ".jsx",
+    ".go",
+    ".rs",
+    ".java",
+    ".rb",
+    ".php",
+    ".c",
+    ".cc",
+    ".cpp",
+    ".h",
+    ".hpp",
+    ".cs",
+}
 
 REQUIRED_FIELDS = [
     "目的と背景",
@@ -93,10 +110,10 @@ def audit_docs(root: Path, doc_file_name: str = DOC_FILE_NAME) -> dict:
             continue
 
         content = target.read_text(encoding="utf-8")
-        has_unfilled_required = any(
-            f"- [ ] {field}:" in content for field in REQUIRED_FIELDS
+        all_required_checked = all(
+            f"- [x] {field}:" in content for field in REQUIRED_FIELDS
         )
-        if "TODO_AI" in content or has_unfilled_required:
+        if "TODO_AI" in content or not all_required_checked:
             unfilled_docs.append(rel)
 
     status = "ok" if not missing_docs and not unfilled_docs else "needs_attention"
