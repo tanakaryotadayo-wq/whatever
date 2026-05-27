@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -110,8 +111,13 @@ def audit_docs(root: Path, doc_file_name: str = DOC_FILE_NAME) -> dict:
             continue
 
         content = target.read_text(encoding="utf-8")
+        if not content.strip():
+            unfilled_docs.append(rel)
+            continue
+
         all_required_checked = all(
-            f"- [x] {field}:" in content for field in REQUIRED_FIELDS
+            re.search(rf"-\s*\[[xX]\]\s*{re.escape(field)}\s*:?", content)
+            for field in REQUIRED_FIELDS
         )
         if "TODO_AI" in content or not all_required_checked:
             unfilled_docs.append(rel)
