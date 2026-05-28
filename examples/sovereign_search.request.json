@@ -1,0 +1,10 @@
+{
+  "query": "mcp stdio jsonrpc python server",
+  "top": 12,
+  "source": "all",
+  "no_hf": true,
+  "github_per_page": 20,
+  "graph_depth": 1,
+  "db": null,
+  "timeout_sec": 90
+}
