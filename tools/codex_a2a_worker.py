@@ -13,7 +13,9 @@ To execute codex, set:
 
 Required for execution:
   codex available on PATH, or CODEX_BIN=/path/to/codex
-  OPENAI_API_KEY configured in the runtime environment
+  local Codex CLI already authenticated, usually by signing in with a ChatGPT account that has Codex access
+
+Do not commit ChatGPT session data, API keys, access tokens, or local Codex config.
 """
 from __future__ import annotations
 
