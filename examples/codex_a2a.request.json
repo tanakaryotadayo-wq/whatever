@@ -1,0 +1,27 @@
+{
+  "jsonrpc": "2.0",
+  "id": "task-001",
+  "method": "message/send",
+  "params": {
+    "task_id": "task-001",
+    "message": {
+      "role": "user",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "Inspect this repository and propose the smallest next step to improve the Sovereign Search tool surface."
+        }
+      ]
+    },
+    "metadata": {
+      "workspace": ".",
+      "mode": "review_diff",
+      "sandbox": "read-only",
+      "use_sovereign_search": false,
+      "constraints": [
+        "Prefer a concise structured result.",
+        "Return JSON conforming to schemas/codex_result.schema.json."
+      ]
+    }
+  }
+}
