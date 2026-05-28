@@ -1,0 +1,50 @@
+name: codex-a2a-smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tools/codex_a2a_worker.py'
+      - 'agents/codex.agent-card.json'
+      - 'schemas/codex_*.schema.json'
+      - 'examples/codex_a2a.request.json'
+      - '.github/workflows/codex-a2a-smoke.yml'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile worker
+        run: python -m py_compile tools/codex_a2a_worker.py
+      - name: Start worker in dry-run mode
+        run: |
+          python tools/codex_a2a_worker.py --host 127.0.0.1 --port 8765 >worker.log 2>&1 &
+          echo $! > worker.pid
+          for i in {1..20}; do
+            curl -fsS http://127.0.0.1:8765/healthz && exit 0
+            sleep 0.5
+          done
+          cat worker.log
+          exit 1
+      - name: Fetch agent card
+        run: curl -fsS http://127.0.0.1:8765/.well-known/agent.json | python -m json.tool
+      - name: Send dry-run task
+        run: |
+          curl -fsS \
+            -H 'Content-Type: application/json' \
+            --data @examples/codex_a2a.request.json \
+            http://127.0.0.1:8765/a2a | tee response.json
+          python - <<'PY'
+          import json
+          data = json.load(open('response.json'))
+          assert 'result' in data, data
+          assert data['result']['state'] == 'dry_run', data
+          PY
+      - name: Stop worker
+        if: always()
+        run: |
+          if [ -f worker.pid ]; then kill $(cat worker.pid) || true; fi
