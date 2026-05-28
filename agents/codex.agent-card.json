@@ -1,0 +1,35 @@
+{
+  "name": "codex-worker",
+  "description": "Codex-backed local implementation and review worker for bounded repository tasks.",
+  "version": "0.1.0",
+  "url": "http://localhost:8765/a2a",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false
+  },
+  "defaultInputModes": ["application/json", "text/plain"],
+  "defaultOutputModes": ["application/json", "text/markdown"],
+  "skills": [
+    {
+      "id": "research_then_implement",
+      "name": "Research then implement",
+      "description": "Use Sovereign Search for public implementation discovery, then implement in a local worktree and return diff and test artifacts."
+    },
+    {
+      "id": "implement",
+      "name": "Implement",
+      "description": "Implement a bounded task in a workspace using codex exec and return a structured result."
+    },
+    {
+      "id": "review_diff",
+      "name": "Review diff",
+      "description": "Review a supplied diff or workspace change set for correctness, tests, and maintainability."
+    }
+  ],
+  "metadata": {
+    "runtime": "codex exec",
+    "transport": "minimal A2A-style JSON-RPC over HTTP",
+    "defaultSandbox": "workspace-write",
+    "defaultMode": "dry-run until explicitly enabled"
+  }
+}
