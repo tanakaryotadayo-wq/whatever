@@ -22,6 +22,20 @@ export CODEX_A2A_ENABLE_EXEC=1
 
 Without that variable, the worker returns the planned `codex exec` command and prompt preview only.
 
+## Codex authentication model
+
+Codex CLI can be used through a signed-in ChatGPT account that includes Codex access. An API key is optional, not the default requirement.
+
+Recommended local setup:
+
+```bash
+codex
+# First run prompts browser/account authentication.
+# Sign in with the ChatGPT account that has Codex access.
+```
+
+The A2A worker inherits whatever authentication the local `codex` CLI already has. Do not commit ChatGPT session data, access tokens, API keys, or local Codex config into this repository.
+
 ## Start the worker
 
 ```bash
@@ -51,14 +65,19 @@ curl -sS \
 
 ## Enable execution
 
-Execution requires `codex` on PATH or `CODEX_BIN` pointing to the executable.
+Execution requires `codex` on PATH or `CODEX_BIN` pointing to the executable. It also requires the local Codex CLI to already be authenticated, usually by signing in with your ChatGPT account on first run.
 
 ```bash
-export OPENAI_API_KEY=...
+# One-time interactive login, if not already done:
+codex
+
+# Then start the gateway with execution enabled:
 export CODEX_A2A_ENABLE_EXEC=1
 export CODEX_A2A_TIMEOUT_SEC=1800
 python3 tools/codex_a2a_worker.py --host 127.0.0.1 --port 8765
 ```
+
+If you intentionally want API-key auth instead of ChatGPT-account auth, configure it in the runtime environment outside this repository.
 
 The worker converts the task into:
 
