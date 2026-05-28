@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "sovereign-search": {
+      "command": "python3",
+      "args": ["/absolute/path/to/whatever/tools/sovereign_search_mcp.py"],
+      "env": {
+        "SOVEREIGN_SEARCH_BIN": "/absolute/path/to/whatever/sovereign_search.py",
+        "AKASHIC_DB": "/absolute/path/to/akashic_universal.db"
+      }
+    }
+  }
+}
