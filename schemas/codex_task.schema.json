@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Codex A2A Worker Task",
+  "type": "object",
+  "required": ["task_id", "goal", "workspace", "mode"],
+  "additionalProperties": false,
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 12000
+    },
+    "workspace": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Local path passed to codex exec --cd. The worker resolves it to an absolute path."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["research_then_implement", "implement", "review_diff"]
+    },
+    "sandbox": {
+      "type": "string",
+      "enum": ["read-only", "workspace-write", "danger-full-access"],
+      "default": "workspace-write"
+    },
+    "use_sovereign_search": {
+      "type": "boolean",
+      "default": true
+    },
+    "constraints": {
+      "type": "array",
+      "items": {"type": "string"},
+      "default": []
+    },
+    "commands_allowed": {
+      "type": "array",
+      "items": {"type": "string"},
+      "default": []
+    },
+    "diff": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Optional diff text for review_diff mode."
+    }
+  }
+}
