@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Codex A2A Worker Result",
+  "type": "object",
+  "required": ["task_id", "verdict", "summary", "files_changed", "commands_run", "artifacts"],
+  "additionalProperties": false,
+  "properties": {
+    "task_id": {"type": "string"},
+    "verdict": {
+      "type": "string",
+      "enum": ["done", "needs_review", "blocked", "failed"]
+    },
+    "summary": {"type": "string"},
+    "files_changed": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "commands_run": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["command", "result"],
+        "additionalProperties": false,
+        "properties": {
+          "command": {"type": "string"},
+          "result": {"type": "string", "enum": ["pass", "fail", "skipped", "unknown"]},
+          "notes": {"type": "string"}
+        }
+      },
+      "default": []
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "path"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": {"type": "string"},
+          "path": {"type": "string"},
+          "description": {"type": "string"}
+        }
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "packet_id": {"type": "string"},
+          "source_path": {"type": "string"},
+          "usage": {"type": "string"}
+        }
+      },
+      "default": []
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "unknown"],
+      "default": "unknown"
+    }
+  }
+}
