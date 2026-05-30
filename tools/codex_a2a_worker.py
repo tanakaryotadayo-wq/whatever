@@ -7,9 +7,9 @@ Endpoints:
   GET  /.well-known/agent.json
   POST /a2a
 
-Default mode is dry-run. It only returns the planned codex command.
-To execute codex, set:
-  CODEX_A2A_ENABLE_EXEC=1
+Default mode is execute. Codex runs the task immediately.
+To opt in to preview mode (no execution), set:
+  CODEX_A2A_MODE=preview
 
 Required for execution:
   codex available on PATH, or CODEX_BIN=/path/to/codex
@@ -167,13 +167,13 @@ def execute_task(task: dict[str, Any]) -> dict[str, Any]:
     prompt = build_prompt(task)
     argv = build_codex_argv(task)
 
-    dry_run = os.environ.get("CODEX_A2A_ENABLE_EXEC") != "1"
+    dry_run = os.environ.get("CODEX_A2A_MODE", "").lower() == "preview"
     if dry_run:
         return {
             "task_id": task["task_id"],
             "state": "dry_run",
             "accepted": True,
-            "message": "Execution disabled. Set CODEX_A2A_ENABLE_EXEC=1 to run codex exec.",
+            "message": "Preview mode active. Unset CODEX_A2A_MODE to execute.",
             "planned_command": argv,
             "prompt_preview": prompt[:4000],
         }
@@ -225,7 +225,7 @@ class Handler(BaseHTTPRequestHandler):
             json_response(self, 200, load_agent_card())
             return
         if self.path == "/healthz":
-            json_response(self, 200, {"ok": True, "service": "codex-a2a-worker", "exec_enabled": os.environ.get("CODEX_A2A_ENABLE_EXEC") == "1"})
+            json_response(self, 200, {"ok": True, "service": "codex-a2a-worker", "mode": "preview" if os.environ.get("CODEX_A2A_MODE", "").lower() == "preview" else "execute"})
             return
         json_response(self, 404, {"ok": False, "error": "not_found"})
 
@@ -266,7 +266,7 @@ def main() -> int:
     args = parse_args()
     httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     print(f"codex-a2a-worker listening on http://{args.host}:{args.port}", file=sys.stderr)
-    print(f"exec enabled: {os.environ.get('CODEX_A2A_ENABLE_EXEC') == '1'}", file=sys.stderr)
+    print(f"mode: {'preview' if os.environ.get('CODEX_A2A_MODE', '').lower() == 'preview' else 'execute'}", file=sys.stderr)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

@@ -1,6 +1,6 @@
 # Codex A2A Worker
 
-This repository includes a minimal A2A-style gateway for running bounded Codex tasks from another agent or orchestrator.
+This repository includes a bounded A2A-style gateway for running Codex tasks from another agent or orchestrator.
 
 The implementation is intentionally small:
 
@@ -10,17 +10,17 @@ The implementation is intentionally small:
 - `schemas/codex_result.schema.json` defines the expected Codex output contract.
 - `examples/codex_a2a.request.json` shows a request envelope.
 
-## Safety default
+## Execution model
 
-The gateway starts in dry-run mode by default.
+The gateway executes by default. This follows the cognitive compiler model: the compiler (Shinon) has already reasoned about the task and emitted a bounded Task Capsule. The executor (Codex) follows the capsule.
 
-It does **not** execute Codex unless this environment variable is set:
+To opt in to preview mode (returns planned command and prompt without executing):
 
 ```bash
-export CODEX_A2A_ENABLE_EXEC=1
+export CODEX_A2A_MODE=preview
 ```
 
-Without that variable, the worker returns the planned `codex exec` command and prompt preview only.
+Without that variable, the worker executes immediately.
 
 ## Codex authentication model
 
@@ -54,7 +54,7 @@ Fetch the agent card:
 curl http://127.0.0.1:8765/.well-known/agent.json
 ```
 
-## Send a dry-run task
+## Send a task
 
 ```bash
 curl -sS \
@@ -63,7 +63,14 @@ curl -sS \
   http://127.0.0.1:8765/a2a | jq
 ```
 
-## Enable execution
+## Preview mode
+
+To run in preview mode (no execution), set:
+
+```bash
+export CODEX_A2A_MODE=preview
+python3 tools/codex_a2a_worker.py --host 127.0.0.1 --port 8765
+```
 
 Execution requires `codex` on PATH or `CODEX_BIN` pointing to the executable. It also requires the local Codex CLI to already be authenticated, usually by signing in with your ChatGPT account on first run.
 
@@ -71,8 +78,7 @@ Execution requires `codex` on PATH or `CODEX_BIN` pointing to the executable. It
 # One-time interactive login, if not already done:
 codex
 
-# Then start the gateway with execution enabled:
-export CODEX_A2A_ENABLE_EXEC=1
+# Then start the gateway (executes by default):
 export CODEX_A2A_TIMEOUT_SEC=1800
 python3 tools/codex_a2a_worker.py --host 127.0.0.1 --port 8765
 ```
@@ -92,18 +98,25 @@ codex exec \
 
 The prompt is sent through stdin.
 
+## Cognitive compiler model
+
+Shinon (GPT-5.5 Pro) acts as the **cognitive compiler**: it ingests context via RAG and Sovereign Search, reasons about the task, and emits a **Task Capsule** — a self-contained, bounded execution plan.
+
+This worker is the **executor**: it receives the Task Capsule and runs Codex inside a sandboxed workspace. The executor does not re-derive intent.
+
+See [cognitive_compiler.md](cognitive_compiler.md) for the full architecture.
+
 ## Recommended orchestration
 
-Use this worker as a bounded implementation/review node, not as a GitHub operator.
-
-Recommended separation:
+Use this worker as a bounded implementation/review node within the cognitive compiler pipeline.
 
 ```text
-AICLI / Shinon
-  -> Codex A2A worker for local implementation and review
-  -> Sovereign Search for public implementation discovery
-  -> GitHub operator for PR creation and comments
-  -> Human gate for merge, deploy, deletion, and secret-affecting actions
+User Intent
+  → Shinon (cognitive compiler)
+    → RAG + Sovereign Search
+    → Emit Task Capsule
+  → Codex A2A Worker (executor)
+  → Human gate for merge, deploy, deletion, and secret-affecting actions
 ```
 
 ## Sovereign Search integration

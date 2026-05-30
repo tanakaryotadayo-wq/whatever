@@ -26,3 +26,15 @@ Self-test for the original engine:
 ```bash
 python3 sovereign_search.py --self-test
 ```
+
+## Operating Doctrine
+
+This repository follows the **cognitive compiler** execution model:
+
+- **Shinon / GPT-5.5 Pro** = cognitive compiler. Compiles tasks using RAG and Sovereign Search.
+- **Sovereign Search** = compiler pass. Discovers public implementations with provenance.
+- **Codex** = subscription-authenticated executor. Executes task capsules in a sandboxed workspace.
+
+Design principle: **強いまま構造で壊れなくする** — do not weaken for safety. Use structural integrity instead.
+
+See [docs/cognitive_compiler.md](docs/cognitive_compiler.md) for the full architecture.
