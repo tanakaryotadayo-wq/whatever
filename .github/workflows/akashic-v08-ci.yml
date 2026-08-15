@@ -44,7 +44,11 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Commit refreshed lockfile to the source branch
-        if: github.event_name == 'push' && github.ref_name == 'akashic/v0.8-knowledge-packet-import'
+        if: >-
+          (github.event_name == 'push' && github.ref_name == 'akashic/v0.8-knowledge-packet-import') ||
+          (github.event_name == 'pull_request' && github.head_ref == 'akashic/v0.8-knowledge-packet-import')
+        env:
+          SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           if git diff --quiet -- package-lock.json; then
             echo 'package-lock.json is already current'
@@ -54,7 +58,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add package-lock.json
           git commit -m 'chore(deps): refresh reproducible npm lockfile'
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "HEAD:${SOURCE_BRANCH}"
       - run: npm run doctor
       - run: npm run test:schemas
       - run: npm run test:knowledge
