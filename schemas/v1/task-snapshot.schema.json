@@ -14,6 +14,9 @@
     "turn_no": {"type": "integer", "minimum": 0},
     "context_need": {"type": ["object", "null"]},
     "candidate_artifact_refs": {"type": "array", "items": {"$ref": "akashic.artifact-ref/v1"}},
+    "verification_report_ref": {"oneOf": [{"$ref": "akashic.artifact-ref/v1"}, {"type": "null"}]},
+    "provenance_ref": {"oneOf": [{"$ref": "akashic.artifact-ref/v1"}, {"type": "null"}]},
+    "adoption_ref": {"oneOf": [{"$ref": "akashic.artifact-ref/v1"}, {"type": "null"}]},
     "error": {"type": ["object", "null"]}
   }
 }
