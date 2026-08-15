@@ -1,40 +1,50 @@
-# whatever
+# Akashic Agent Operating Layer
 
-Build resilient language agents as graphs.
+Akashic is the control-semantics layer for durable AI-agent work. It does not replace GitHub, Temporal, Drive/R2, Vercel, or agent runtimes. It defines how they cooperate without context explosion, stale input revival, or ambiguous side effects.
 
-## Sovereign Search
+## Canonical completion path
 
-This repository now includes a toolized `sovereign_search.py` surface for AI/CLI orchestration.
-
-Core files:
-
-- `sovereign_search.py` — unified search engine over GitHub, Hugging Face, and Akashic DB.
-- `tools/sovereign_search_tool.py` — zero-MCP JSON CLI wrapper.
-- `tools/sovereign_search_mcp.py` — MCP server wrapper.
-- `.aicli/tools/sovereign_search.yaml` — AICLI tool declaration.
-- `schemas/sovereign_search.openai.tool.json` — OpenAI-style function tool schema.
-- `docs/sovereign_search.md` — usage and orchestration notes.
-
-Quick check:
-
-```bash
-python3 tools/sovereign_search_tool.py --query "tauri pty session" --top 5
+```text
+ChatGPT / MCP
+      ↓
+Vercel Gateway
+      ↓
+Temporal Control Server
+      ↓
+RunAgentTask Workflow
+      ↓
+CompileContext → RunAgentTurn → INPUT_REQUIRED
+      ↑                    ↓
+      └── CAS Update ──────┘
+      ↓
+Verify immutable candidate → fenced adoption
+      ↓
+Drive/R2 artifact and evidence plane
 ```
 
-Self-test for the original engine:
+The canonical integration branch is `akashic/v0.7-canonical-temporal-final`.
+
+## Run
 
 ```bash
-python3 sovereign_search.py --self-test
+make bootstrap
+make doctor
+make test
+make test-p0
 ```
 
-## Operating Doctrine
+The official Codex binary acceptance is deliberately separate because it requires a self-hosted machine with an authenticated Codex subscription session:
 
-This repository follows the **cognitive compiler** execution model:
+```bash
+make test-codex-live
+```
 
-- **Shinon / GPT-5.5 Pro** = cognitive compiler. Compiles tasks using RAG and Sovereign Search.
-- **Sovereign Search** = compiler pass. Discovers public implementations with provenance.
-- **Codex** = subscription-authenticated executor. Executes task capsules in a sandboxed workspace.
+A normal CI pass is not evidence that the live Codex gate passed.
 
-Design principle: **強いまま構造で壊れなくする** — do not weaken for safety. Use structural integrity instead.
+## Authorities
 
-See [docs/cognitive_compiler.md](docs/cognitive_compiler.md) for the full architecture.
+- GitHub: source, review, CI, provenance
+- Temporal: workflow lifecycle, wait/retry/replay/cancel/task queues
+- Drive/R2: immutable context, artifact, evidence, and handoff bytes
+- Vercel: thin ChatGPT MCP ingress
+- Akashic: routing, context negotiation/compilation, capability policy, effect identity, verification, and adoption
