@@ -21,6 +21,7 @@ Import mechanisms, not marketing claims. A packet is `IMPORTED` only with a conc
 - KPK-014 — CloudEvents / W3C trace: `packages/contracts/src/events.js`
 - KPK-016 — Unified lineage/provenance: `packages/contracts/src/provenance.js`
 - KPK-019 — Fast/durable lane router: `packages/contracts/src/routing.js`
+- KPK-022 — Evidence-linked JSONL regression flywheel: `packages/eval-flywheel/`, `schemas/v1/eval-{case,report}.schema.json`, `docs/ADR-0007-*`
 - KPK-023 — Session capability matrix: `packages/contracts/src/sessions.js`
 
 ## HARDEN_THIS_BRANCH
@@ -45,13 +46,9 @@ Import mechanisms, not marketing claims. A packet is `IMPORTED` only with a conc
 
 - KPK-026 — fixed Temporal / Vercel / Cloudflare bake-off harness: `experiments/orchestrator-bakeoff/`
 
-## NEXT_IMPLEMENTATION
+## DEFERRED BY EVIDENCE
 
-- KPK-018 — Saga compensation registry, only for real reversible effects
-- KPK-022 — Verification/eval flywheel from traces and corrections
-
-## DEFER / REJECT
-
+- KPK-018 — Saga compensation registry. Temporal's official reverse-compensation pattern is accepted, but the current Drive staging/publish operation is one Activity with local cleanup. A durable registry is added only when at least two independently durable, reversible forward steps exist. See `docs/ADR-0008-SAGA-ADOPTION-BOUNDARY.md`.
 - KPK-024 — Continue-As-New until measured history pressure
 - KPK-025 — transactional outbox until a real dual-write boundary
 - KPK-027 — reject duplicate external-payload layer; refs-first already exists
@@ -63,8 +60,9 @@ Import mechanisms, not marketing claims. A packet is `IMPORTED` only with a conc
 
 1. Deterministic mapping, policy, trace, provenance, stale-fence and queue-isolation tests pass.
 2. Drive tests prove digest verification, staging compensation, dedup, stale-projection rejection, mailbox write-once behavior, Changes cursor paging and bounded retry.
-3. Existing Temporal CAS and Update-With-Start remain green across distinct role queues.
-4. All Temporal SDK packages and `@googleapis/drive` are pinned to exact versions.
-5. Live provider tests remain explicit, credential-gated and fail-closed.
-6. A workflow backend does not win by documentation comparison.
-7. All KPK-001 through KPK-030 remain represented in this matrix and `packet-registry.json`.
+3. Eval tests run accepted JSONL cases against real Core capabilities; Candidate cases remain skipped until evidence-linked verification.
+4. Existing Temporal CAS and Update-With-Start remain green across distinct role queues.
+5. All Temporal SDK packages and `@googleapis/drive` are pinned to exact versions.
+6. Live provider tests remain explicit, credential-gated and fail-closed.
+7. A workflow backend does not win by documentation comparison.
+8. All KPK-001 through KPK-030 remain represented in this matrix and `packet-registry.json`.
