@@ -1,35 +1,27 @@
 {
-  "name": "codex-worker",
-  "description": "Codex-backed local implementation and review worker for bounded repository tasks.",
-  "version": "0.1.0",
-  "url": "http://localhost:8765/a2a",
+  "name": "akashic-codex-turn-worker",
+  "description": "Executes one bounded, idempotent Codex turn for a Temporal Activity. It is not a task lifecycle authority.",
+  "url": "http://127.0.0.1:8788/a2a",
+  "version": "0.7.0",
   "capabilities": {
     "streaming": false,
-    "pushNotifications": false
+    "pushNotifications": false,
+    "stateTransitionHistory": true
   },
   "defaultInputModes": ["application/json", "text/plain"],
-  "defaultOutputModes": ["application/json", "text/markdown"],
+  "defaultOutputModes": ["application/json"],
   "skills": [
     {
-      "id": "research_then_implement",
-      "name": "Research then implement",
-      "description": "Use Sovereign Search for public implementation discovery, then implement in a local worktree and return diff and test artifacts."
-    },
-    {
-      "id": "implement",
-      "name": "Implement",
-      "description": "Implement a bounded task in a workspace using codex exec and return a structured result."
-    },
-    {
-      "id": "review_diff",
-      "name": "Review diff",
-      "description": "Review a supplied diff or workspace change set for correctness, tests, and maintainability."
+      "id": "run-agent-turn",
+      "name": "Run one Codex turn",
+      "description": "Execute one turn in a bounded workspace and return COMPLETED, FAILED, or INPUT_REQUIRED to the owning Workflow.",
+      "tags": ["codex", "temporal-activity", "idempotent", "workspace"]
     }
   ],
-  "metadata": {
-    "runtime": "codex exec",
-    "transport": "minimal A2A-style JSON-RPC over HTTP",
-    "defaultSandbox": "workspace-write",
-    "defaultMode": "dry-run until explicitly enabled"
+  "x-akashic": {
+    "activity_boundary": "one_turn",
+    "task_authority": "temporal",
+    "session_capability": "PERSISTENT_WITH_RECONCILIATION",
+    "effect_key": "{task_id}:{logical_attempt_id}:{turn_no}"
   }
 }
