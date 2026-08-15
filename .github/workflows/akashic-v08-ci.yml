@@ -34,7 +34,15 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: package-lock.json
-      - run: npm install
+      - name: Resolve workspace dependencies and refresh lockfile
+        run: npm install
+      - name: Preserve generated lockfile for source reconciliation
+        uses: actions/upload-artifact@v4
+        with:
+          name: akashic-package-lock-${{ github.sha }}
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 7
       - run: npm run doctor
       - run: npm run test:schemas
       - run: npm run test:knowledge
