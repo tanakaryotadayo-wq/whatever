@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "akashic.artifact-ref/v1",
+  "title": "ArtifactRefV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["media_type", "digest", "size", "uri"],
+  "properties": {
+    "media_type": {"type": "string", "minLength": 1},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "size": {"type": "integer", "minimum": 0},
+    "uri": {"type": "string", "minLength": 1},
+    "artifact_type": {"type": "string"},
+    "annotations": {"type": "object", "additionalProperties": {"type": "string"}}
+  }
+}
