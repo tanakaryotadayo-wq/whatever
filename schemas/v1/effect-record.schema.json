@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "akashic.effect-record/v1",
+  "title": "EffectRecordV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "effect_key", "subject_digest", "owner", "generation", "status", "result_digest"],
+  "properties": {
+    "schema": {"const": "akashic.effect-record/v1"},
+    "effect_key": {"type": "string", "minLength": 1, "maxLength": 512},
+    "subject_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "owner": {"type": "string", "minLength": 1, "maxLength": 512},
+    "generation": {"type": "integer", "minimum": 1},
+    "status": {"enum": ["STARTED", "SUCCEEDED", "FAILED"]},
+    "result_digest": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+    "failure_code": {"type": "string", "maxLength": 256},
+    "idempotent_replay": {"type": "boolean"}
+  }
+}

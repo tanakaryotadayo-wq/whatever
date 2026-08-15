@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "akashic.policy-decision/v1",
+  "title": "PolicyDecisionV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "decision", "operation", "resource", "actor", "mutation", "matched_rule_ids", "policy_version", "reason"],
+  "properties": {
+    "schema": {"const": "akashic.policy-decision/v1"},
+    "decision": {"enum": ["allow", "prompt", "forbid"]},
+    "operation": {"type": "string", "minLength": 1, "maxLength": 256},
+    "resource": {"type": "string", "maxLength": 4096},
+    "actor": {"type": "string", "minLength": 1, "maxLength": 256},
+    "mutation": {"type": "boolean"},
+    "matched_rule_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 256}},
+    "policy_version": {"type": "string", "minLength": 1, "maxLength": 256},
+    "reason": {"type": "string", "minLength": 1, "maxLength": 2048}
+  }
+}
