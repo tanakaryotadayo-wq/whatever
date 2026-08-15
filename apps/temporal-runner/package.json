@@ -7,7 +7,7 @@
   "dependencies": {
     "@akashic/contracts": "0.7.0",
     "@akashic/temporal-workflow": "0.7.0",
-    "@temporalio/client": "latest"
+    "@temporalio/client": "1.21.1"
   },
   "engines": {"node": ">=20"}
 }

@@ -18,8 +18,9 @@ This registry imports mechanisms, not marketing claims. A packet is only `IMPORT
 - Three-zone context sections and deterministic query-time cache keys.
 - Provider session capability and fail-closed recovery decisions.
 - Stable effect identity, generation fencing, and idempotent completion contracts.
-- Skills that make the routing, context, verification, and adoption discipline reusable.
+- Skills that make routing, context, verification, and adoption discipline reusable.
 - A bounded orchestrator bake-off scenario and scorecard.
+- Temporal Worker Deployment Versioning with immutable build IDs, PINNED workflows, and distinct Workflow/Context/Agent/Assurance Task Queues.
 
 ## Explicit non-imports
 
@@ -28,6 +29,7 @@ This registry imports mechanisms, not marketing claims. A packet is only `IMPORT
 - No large bodies in workflow history.
 - No default multi-agent topology.
 - No autonomous memory rewrite.
+- No deprecated Temporal `buildId + useVersioning` API.
 - No claim that Vercel, Temporal, or Cloudflare has won before the fixed bake-off completes.
 
 ## IMPORT_THIS_BRANCH
@@ -37,6 +39,7 @@ This registry imports mechanisms, not marketing claims. A packet is only `IMPORT
 | KPK-001 | Akashic Private Plugin: Skills + MCP server | `.agents/skills/`<br>`knowledge/PACKET_ADOPTION_MATRIX.md` |
 | KPK-002 | MCP Tasks compatibility surface | `packages/contracts/src/mcp-tasks.js` |
 | KPK-008 | Agent provenance plus verification/adoption gate | `packages/contracts/src/provenance.js` |
+| KPK-009 | Pinned Workflow versions and independent Activity Task Queues | `workflows/temporal/src/worker-deployment.js`<br>`workflows/temporal/src/task-queues.js`<br>`workflows/temporal/src/worker-topology.js`<br>`docs/ADR-0005-TEMPORAL-WORKER-DEPLOYMENTS.md` |
 | KPK-011 | Three-zone context workspace | `packages/contracts/src/context-memory.js` |
 | KPK-012 | Query-time selective memory construction | `packages/contracts/src/context-memory.js` |
 | KPK-013 | Policy-as-code with executable test vectors | `packages/contracts/src/policy.js` |
@@ -81,7 +84,6 @@ This registry imports mechanisms, not marketing claims. A packet is only `IMPORT
 
 | Packet | Mechanism | Target |
 |---|---|---|
-| KPK-009 | Pinned workflow versions and independent Activity task queues | `knowledge/PACKET_ADOPTION_MATRIX.md` |
 | KPK-010 | Drive immutable artifact adapter and mailbox projection | `knowledge/PACKET_ADOPTION_MATRIX.md` |
 | KPK-018 | Saga compensation registry | `knowledge/PACKET_ADOPTION_MATRIX.md` |
 | KPK-022 | Verification flywheel from traces and corrections | `knowledge/PACKET_ADOPTION_MATRIX.md` |
@@ -132,8 +134,10 @@ This registry imports mechanisms, not marketing claims. A packet is only `IMPORT
 
 ## Acceptance gates
 
-1. Contract tests prove deterministic mapping, default-deny policy, trace validation, provenance subject matching, and stale-fence rejection.
-2. Existing Temporal CAS and Update-With-Start tests remain green.
-3. Skills contain no provider secrets and never authorize mutations by prose alone.
-4. Bake-off results are stored as evidence; a platform does not win by documentation comparison.
-5. `packet-registry.json` remains the machine-readable adoption record.
+1. Contract tests prove deterministic mapping, default-deny policy, trace validation, provenance subject matching, stale-fence rejection, queue isolation, and deployment-version validation.
+2. Existing Temporal CAS and Update-With-Start tests remain green across distinct role queues.
+3. All Temporal SDK packages are pinned to the same exact version.
+4. Production versioning uses Worker Deployment Versioning with immutable build IDs and PINNED behavior.
+5. Skills contain no provider secrets and never authorize mutations by prose alone.
+6. Bake-off results are stored as evidence; a platform does not win by documentation comparison.
+7. `packet-registry.json` remains the machine-readable adoption record.

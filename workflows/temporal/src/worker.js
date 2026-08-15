@@ -1,16 +1,18 @@
-import { NativeConnection, Worker } from "@temporalio/worker";
-import { fileURLToPath } from "node:url";
-import * as activities from "./activities.js";
-import { taskQueue } from "./shared.js";
+import { NativeConnection } from "@temporalio/worker";
+import { createWorkerTopology, runWorkerTopology } from "./worker-topology.js";
 
 const address = process.env.TEMPORAL_ADDRESS || "localhost:7233";
 const namespace = process.env.TEMPORAL_NAMESPACE || "default";
-const connection = await NativeConnection.connect({ address });
-const worker = await Worker.create({
-  connection,
-  namespace,
-  taskQueue: process.env.AKASHIC_TASK_QUEUE || taskQueue,
-  workflowsPath: fileURLToPath(new URL("./workflows.js", import.meta.url)),
-  activities
+const tls = String(process.env.TEMPORAL_TLS || "false").toLowerCase() === "true" ? {} : undefined;
+const connection = await NativeConnection.connect({
+  address,
+  tls,
+  apiKey: process.env.TEMPORAL_API_KEY || undefined
 });
-await worker.run();
+
+try {
+  const workers = await createWorkerTopology({ connection, namespace, env: process.env });
+  await runWorkerTopology(workers);
+} finally {
+  await connection.close();
+}
