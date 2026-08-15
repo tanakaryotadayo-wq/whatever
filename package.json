@@ -17,6 +17,6 @@
     "test:p0": "npm run test:integration -w @akashic/temporal-workflow",
     "test:codex-live": "bash scripts/codex-live-acceptance.sh"
   },
-  "devDependencies": {"ajv": "latest"},
+  "devDependencies": {"ajv": "8.17.1"},
   "engines": {"node": ">=20"}
 }
