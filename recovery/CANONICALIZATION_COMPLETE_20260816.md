@@ -15,17 +15,20 @@ PR: #3
 - Demoted the Cloudflare kernel to a conformance implementation rather than a competing state authority.
 - Reconstructed the canonical overlay from 167 CRC/size/path-validated ZIP local entries.
 - Re-cloned this public branch into a clean directory and passed doctor, schema validation, Python compile/tests, Vercel tests, Cloudflare conformance tests, and Temporal unit/integration tests.
-- Published source, evidence, manifest, SHA-256 checksums, and the provider gate record to the Google Drive `releases/` plane.
+- Published source, evidence, manifest, SHA-256 checksums, and provider-gate evidence to the Google Drive `releases/` plane.
+- Removed all user-operated IDE/workspace dependencies from the Core completion path via ADR-0003.
 
-## Sole external provider gate
+## Provider certification boundary
 
-The official Codex live two-turn acceptance remains `SKIPPED_FAIL_CLOSED` until run on a host containing the user's subscription-authenticated official Codex binary. Required proof:
+Akashic Core is considered closed by provider-independent automated evidence. A provider-specific live runtime that is not exposed through a connected ChatGPT tool is not allowed to block Core completion.
+
+The subscription-authenticated official Codex live two-turn test is therefore an OPTIONAL PROVIDER CERTIFICATION while that binary is not directly invokable from this chat. When the runtime becomes connector/API-accessible, certification should prove:
 
 1. Turn 1 reaches `INPUT_REQUIRED`.
 2. `ContextPacketDelta` resumes the same `logical_attempt_id` and provider thread.
 3. Turn 2 reaches `COMPLETED` without resending the full Task Capsule.
 4. Machine-generated transcript, process metadata, artifact hashes, and verification evidence are attached.
 
-Tracking issue: #4.
+Tracking issue: #4 may remain open as provider certification work, but it is not a Core merge blocker.
 
-Fixture success is not provider proof.
+Fixture success is Core contract evidence, not provider-specific proof.
