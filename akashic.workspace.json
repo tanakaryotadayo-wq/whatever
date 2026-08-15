@@ -1,0 +1,23 @@
+{
+  "$schema": "./schemas/v1/workspace.schema.json",
+  "schema": "akashic.workspace/v1",
+  "name": "Akashic Agent Operating Layer",
+  "source_authority": {
+    "provider": "github",
+    "repository": "tanakaryotadayo-wq/whatever",
+    "canonical_branch": "main",
+    "integration_branch": "akashic/v0.7-canonical-temporal-final"
+  },
+  "profiles": {
+    "native-mac": ["codex-subscription-auth", "local-ai", "live-agent-testing"],
+    "container": ["contract-tests", "temporal-fixture", "ci"],
+    "cloud-cleanroom": ["reproducibility", "fault-injection", "review"]
+  },
+  "commands": {
+    "bootstrap": "make bootstrap",
+    "doctor": "make doctor",
+    "test": "make test",
+    "p0": "make test-p0",
+    "codex_live": "make test-codex-live"
+  }
+}

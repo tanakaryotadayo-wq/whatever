@@ -1,11 +1,42 @@
-# Akashic ChatGPT Gateway v0.6
+# Akashic ChatGPT Gateway — v0.7
 
-A stateless ChatGPT-facing MCP gateway for the Akashic execution kernel.
+This Next.js service is a thin MCP/HTTPS ingress. It does not execute agents or own task state.
 
-- MCP endpoint: `/api/mcp`
-- Health endpoint: `/api/health`
-- Durable task state stays in the external Akashic runner.
-- Mutating tools are disabled by default.
-- Configure `AKASHIC_RUNNER_URL`, `AKASHIC_RUNNER_TOKEN`, and only then set `AKASHIC_MUTATIONS_ENABLED=true` behind authentication.
+```text
+ChatGPT
+  ↓ MCP
+Vercel Gateway
+  ↓ authenticated JSON-RPC
+Temporal Control Server
+```
 
-Deploy the `deploy/vercel-chatgpt-app` directory as a Next.js project. Use the native `vercel.app` URL before custom DNS.
+## Environment
+
+```text
+AKASHIC_CONTROL_URL=https://control.example.com
+AKASHIC_CONTROL_TOKEN=...
+AKASHIC_CONTROL_HOST_ALLOWLIST=control.example.com
+AKASHIC_MUTATIONS_ENABLED=false
+```
+
+`AKASHIC_RUNNER_URL` and `AKASHIC_RUNNER_TOKEN` remain temporary compatibility aliases.
+
+## Safety defaults
+
+- remote control URLs must use HTTPS;
+- credentials inside URLs are rejected;
+- optional hostname allowlist;
+- redirects disabled;
+- request timeout enforced;
+- secrets removed from returned structures;
+- mutations disabled unless explicitly enabled.
+
+## Test and build
+
+```bash
+npm install
+npm test
+npm run build
+```
+
+A healthy gateway without `AKASHIC_CONTROL_URL` proves only that the ingress builds. It is not an end-to-end task execution result.

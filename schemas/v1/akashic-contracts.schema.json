@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://akashic.local/schemas/contracts-v1.json",
+  "$defs": {
+    "ArtifactRefV1": {
+      "type": "object",
+      "required": ["schema", "media_type", "digest", "size", "uri"],
+      "properties": {
+        "schema": {"const": "akashic.artifact-ref/v1"},
+        "media_type": {"type": "string", "minLength": 1},
+        "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "size": {"type": "integer", "minimum": 0},
+        "uri": {"type": "string", "minLength": 1},
+        "artifact_type": {"type": "string"},
+        "annotations": {"type": "object", "additionalProperties": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "TaskCapsuleV1": {
+      "type": "object",
+      "required": ["schema", "task_id", "context_id", "logical_attempt_id", "goal", "acceptance", "agent", "idempotency_key"],
+      "properties": {
+        "schema": {"const": "akashic.task-capsule/v1"},
+        "task_id": {"type": "string", "minLength": 1, "maxLength": 160},
+        "context_id": {"type": "string", "minLength": 1},
+        "logical_attempt_id": {"type": "string", "minLength": 1},
+        "goal": {"type": "string", "minLength": 1},
+        "acceptance": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "agent": {"enum": ["fixture", "codex", "claude", "local"]},
+        "idempotency_key": {"type": "string", "minLength": 1},
+        "context_refs": {"type": "array", "items": {"$ref": "#/$defs/ArtifactRefV1"}},
+        "policy": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    "ContextNeedV1": {
+      "type": "object",
+      "required": ["schema", "task_id", "request_id", "logical_attempt_id", "expected_seq", "need", "known", "max_tokens"],
+      "properties": {
+        "schema": {"const": "akashic.context-need/v1"},
+        "task_id": {"type": "string"},
+        "request_id": {"type": "string"},
+        "logical_attempt_id": {"type": "string"},
+        "expected_seq": {"type": "integer", "minimum": 0},
+        "need": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "known": {"type": "array", "items": {"type": "string"}},
+        "max_tokens": {"type": "integer", "minimum": 1},
+        "reason": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "ContextPacketDeltaRefV1": {
+      "type": "object",
+      "required": ["schema", "task_id", "delta_id", "request_id", "logical_attempt_id", "expected_seq", "delta_ref"],
+      "properties": {
+        "schema": {"const": "akashic.context-packet-delta-ref/v1"},
+        "task_id": {"type": "string"},
+        "delta_id": {"type": "string"},
+        "request_id": {"type": "string"},
+        "logical_attempt_id": {"type": "string"},
+        "expected_seq": {"type": "integer", "minimum": 0},
+        "delta_ref": {"$ref": "#/$defs/ArtifactRefV1"}
+      },
+      "additionalProperties": false
+    },
+    "VerificationReportRefV1": {
+      "type": "object",
+      "required": ["schema", "subject_digest", "verdict", "verifier", "report_ref"],
+      "properties": {
+        "schema": {"const": "akashic.verification-report-ref/v1"},
+        "subject_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "verdict": {"enum": ["PASS", "FAIL", "NEEDS_APPROVAL"]},
+        "verifier": {"type": "string"},
+        "report_ref": {"$ref": "#/$defs/ArtifactRefV1"}
+      },
+      "additionalProperties": false
+    },
+    "TaskSnapshotV1": {
+      "type": "object",
+      "required": ["schema", "task_id", "logical_attempt_id", "state", "context_seq", "turn_no", "terminal", "artifact_refs"],
+      "properties": {
+        "schema": {"const": "akashic.task-snapshot/v1"},
+        "task_id": {"type": "string"},
+        "temporal_run_id": {"type": ["string", "null"]},
+        "logical_attempt_id": {"type": "string"},
+        "activity_attempt": {"type": ["integer", "null"], "minimum": 1},
+        "agent_session_id": {"type": ["string", "null"]},
+        "request_id": {"type": ["string", "null"]},
+        "context_seq": {"type": "integer", "minimum": 0},
+        "turn_no": {"type": "integer", "minimum": 0},
+        "state": {"enum": ["SUBMITTED", "COMPILING_CONTEXT", "WORKING", "INPUT_REQUIRED", "VERIFYING", "ADOPTING", "COMPLETED", "FAILED", "CANCELED"]},
+        "terminal": {"type": "boolean"},
+        "artifact_refs": {"type": "array", "items": {"$ref": "#/$defs/ArtifactRefV1"}},
+        "error": {"type": ["object", "null"]}
+      },
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {"$ref": "#/$defs/ArtifactRefV1"},
+    {"$ref": "#/$defs/TaskCapsuleV1"},
+    {"$ref": "#/$defs/ContextNeedV1"},
+    {"$ref": "#/$defs/ContextPacketDeltaRefV1"},
+    {"$ref": "#/$defs/VerificationReportRefV1"},
+    {"$ref": "#/$defs/TaskSnapshotV1"}
+  ]
+}

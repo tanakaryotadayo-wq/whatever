@@ -1,34 +1,30 @@
-# Akashic Cloudflare Durable Kernel scaffold
+# Cloudflare Task Contract Conformance Experiment
 
-This is the **durable Control Plane candidate**, not the first deployment target.
-It stores one task per Durable Object and exposes a small HTTP domain API. The
-actual Codex/Claude/local-model runner remains external until a Sandbox/Container
-binding is configured.
+This directory is retained as an alternative implementation of the Akashic task-state contract. It is **not** the canonical v0.7 workflow authority.
 
-## Why Cloudflare
+## Canonical authority
 
-- Durable Object identity maps naturally to `task_id` or `context_id`.
-- Worker handles public HTTPS routing and authentication.
-- Workflows/Queues can later drive retries and replay.
-- R2 can become the CAS/Data Plane.
-- Sandbox SDK combines Workers, Durable Objects, and isolated Linux containers.
+- Temporal owns durable workflow state, waiting, retries, replay, cancellation, and task queues.
+- This Durable Object implementation exists to test whether the public task contract is portable.
+- Never route production mutations to Temporal and this Durable Object at the same time.
 
-## Deploy safely
+## Allowed uses
+
+- Run state-machine and stale-delta conformance tests.
+- Compare operational cost and semantics with Temporal.
+- Explore Cloudflare edge ingress, R2, rate limiting, and auth.
+
+## Forbidden claims
+
+- Do not claim Codex/Claude execution from this scaffold.
+- Do not treat a Durable Object snapshot as the canonical Temporal history.
+- Do not deploy it as a second writer for an existing `task_id`.
+
+## Test
 
 ```bash
 npm install
-npx wrangler secret put AKASHIC_CONTROL_TOKEN
 npm test
-npm run deploy
 ```
 
-Use the generated `workers.dev` hostname first. Do not add a custom domain until
-that endpoint works. A Worker Custom Domain requires an active Cloudflare zone
-and cannot be attached to a hostname that already has a conflicting CNAME.
-
-## Deliberate limits
-
-- No MCP endpoint is claimed yet.
-- No provider credentials are embedded.
-- No automatic task execution is claimed.
-- State transition API is intended for an authenticated runner only.
+A future backend replacement must pass the same Akashic contract suite and a migration/fencing review before it can become authoritative.

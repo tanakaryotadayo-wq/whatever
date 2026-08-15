@@ -1,0 +1,72 @@
+{
+  "schema": "akashic.asset-ledger/v1",
+  "generated_for": "akashic/v0.7-canonical-temporal-final",
+  "assets": [
+    {
+      "asset_id": "github-main-05c58ed",
+      "source": "github",
+      "ref": "05c58ed7a81e479d9074823e8a8207816cff3b15",
+      "status": "ADAPT",
+      "reason": "Preserve source history, schemas, agent card, examples, and discovery tools; supersede the synchronous task runner."
+    },
+    {
+      "asset_id": "github-v06-gateway-9ddaa6b",
+      "source": "github",
+      "ref": "9ddaa6b03ec246ab15391a9eaabe7930192335c7",
+      "status": "ADOPT",
+      "reason": "Provides the deployed Vercel gateway, Cloudflare experiment, Sites contract, and WASM boundary."
+    },
+    {
+      "asset_id": "github-v06-hardening-7eb276e",
+      "source": "github",
+      "ref": "7eb276effee7b3ea56afbcc0ffdf44363ac4e640",
+      "status": "ADOPT_BASE",
+      "reason": "Contains SSRF/DoS/depth/auth hardening and focused contract tests; selected as v0.7 branch parent."
+    },
+    {
+      "asset_id": "drive-stateful-worker-v06-zip",
+      "source": "google-drive",
+      "ref": "A2A_stateful_ai_worker_v0_6.zip",
+      "sha256": "4b7a7e0145934b14dc2d90f65d871941911abeffa0513e838fdd9a77962b633c",
+      "status": "PRESERVE_EVIDENCE",
+      "reason": "Validated historical release. v0.7 reuses its stateful/idempotent/cancel/fail-closed semantics while changing the worker boundary to one turn per Activity."
+    },
+    {
+      "asset_id": "drive-stateful-worker-v06-patch",
+      "source": "google-drive",
+      "ref": "A2A_stateful_ai_worker_v0_6.patch",
+      "sha256": "4915ffd1aced0a43bcf6cce5d4073b871a48c81c257b61798ba3848a34676c32",
+      "status": "PRESERVE_EVIDENCE",
+      "reason": "Retained for provenance; not blindly applied because v0.7 changes Task Authority and Activity boundaries."
+    },
+    {
+      "asset_id": "drive-v06-evidence",
+      "source": "google-drive",
+      "ref": "AKASHIC_V0_6_EVIDENCE_20260816.zip",
+      "sha256": "e0c0095eb52188b818403a952f3acd31980191a529627aca9b6c4c736d4bd10a",
+      "status": "PRESERVE_EVIDENCE",
+      "reason": "Historical test/deployment evidence; not promoted into a v0.7 live claim."
+    },
+    {
+      "asset_id": "external-knowledge-packets-20260816",
+      "source": "google-drive-research",
+      "ref": "akashic_external_knowledge_packets_2026-08-16",
+      "status": "IMPORT_SELECTED",
+      "reason": "Imports Temporal Update CAS, Update-With-Start, one-turn Activities, OCI-style references, effect ledger/fencing, provenance, and Drive projection patterns."
+    },
+    {
+      "asset_id": "cloudflare-durable-kernel",
+      "source": "github",
+      "ref": "deploy/cloudflare-kernel",
+      "status": "DEFER_AS_CONFORMANCE_EXPERIMENT",
+      "reason": "Useful state-machine implementation, but forbidden as concurrent authority while Temporal is canonical."
+    },
+    {
+      "asset_id": "legacy-tools-codex-a2a-worker",
+      "source": "github",
+      "ref": "tools/codex_a2a_worker.py",
+      "status": "SUPERSEDE",
+      "reason": "Task-wide synchronous subprocess execution conflicts with durable one-turn Activity semantics."
+    }
+  ]
+}

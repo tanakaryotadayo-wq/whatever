@@ -1,0 +1,27 @@
+name: Akashic Google Drive Live Acceptance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drive-live:
+    runs-on: [self-hosted, macOS, akashic-drive]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Drive client
+        run: python3 -m pip install google-api-python-client google-auth
+      - name: Run immutable upload and projection acceptance
+        env:
+          AKASHIC_DRIVE_ARTIFACTS_FOLDER_ID: ${{ secrets.AKASHIC_DRIVE_ARTIFACTS_FOLDER_ID }}
+          AKASHIC_DRIVE_PROJECTIONS_FOLDER_ID: ${{ secrets.AKASHIC_DRIVE_PROJECTIONS_FOLDER_ID }}
+        run: python3 scripts/drive_live_acceptance.py --evidence-dir .akashic-evidence/drive-live
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: akashic-drive-live-evidence
+          path: .akashic-evidence/drive-live
+          if-no-files-found: error
