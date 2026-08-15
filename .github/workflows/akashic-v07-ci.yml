@@ -24,13 +24,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: package-lock.json
-      - run: npm install
+      - name: Install exact locked dependency graph
+        run: npm ci
       - run: npm run doctor
       - run: npm run test:schemas
       - run: npm run test:core
