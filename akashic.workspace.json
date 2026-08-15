@@ -1,0 +1,21 @@
+{
+  "schema": "akashic.workspace/v1",
+  "name": "Akashic Agent Operating Layer",
+  "source_authority": {
+    "provider": "github",
+    "repository": "tanakaryotadayo-wq/whatever",
+    "default_branch": "main"
+  },
+  "profiles": {
+    "native-mac": {"purpose": ["codex-subscription-auth", "local-ai", "live-agent-testing"]},
+    "container": {"purpose": ["contract-tests", "temporal-fixture", "ci"]},
+    "cloud-cleanroom": {"purpose": ["reproducibility", "fault-injection", "external-agent-review"]}
+  },
+  "commands": {
+    "bootstrap": "npm install",
+    "doctor": "npm run doctor",
+    "test": "npm test",
+    "vertical_slice": "npm run test:p0",
+    "codex_live": "npm run test:codex-live"
+  }
+}
