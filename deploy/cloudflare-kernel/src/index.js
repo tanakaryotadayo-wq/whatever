@@ -126,6 +126,7 @@ export class TaskKernel {
       }
 
       if (request.method === "POST" && url.pathname === "/transition") {
+        if (TERMINAL.has(snapshot.state)) return json({ ...snapshot, idempotent_replay: true });
         const payload = await bodyJson(request);
         const toState = payload.to_state;
         const kind = payload.kind;
@@ -172,7 +173,7 @@ export default {
       }));
     }
     if (!parsed) return json({ error: "not_found" }, 404);
-    if (request.method !== "GET" && !bearerAuthorized(request, env)) {
+    if (!bearerAuthorized(request, env)) {
       return json({ error: "unauthorized" }, 401);
     }
     const id = env.TASK_KERNEL.idFromName(parsed.taskId);
