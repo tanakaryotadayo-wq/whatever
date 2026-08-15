@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "akashic.context-packet-delta-ref/v1",
+  "$id": "https://akashic.dev/schemas/v1/context-packet-delta-ref.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": ["delta_id", "task_id", "request_id", "logical_attempt_id", "expected_seq", "delta_ref"],
@@ -10,6 +10,6 @@
     "request_id": {"type": "string", "minLength": 1},
     "logical_attempt_id": {"type": "string", "minLength": 1},
     "expected_seq": {"type": "integer", "minimum": 0},
-    "delta_ref": {"$ref": "akashic.artifact-ref/v1"}
+    "delta_ref": {"$ref": "https://akashic.dev/schemas/v1/artifact-ref.schema.json"}
   }
 }

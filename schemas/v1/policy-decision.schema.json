@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "akashic.policy-decision/v1",
+  "$id": "https://akashic.dev/schemas/v1/policy-decision.schema.json",
   "title": "PolicyDecisionV1",
   "type": "object",
   "additionalProperties": false,

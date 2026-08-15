@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "akashic.effect-record/v1",
+  "$id": "https://akashic.dev/schemas/v1/effect-record.schema.json",
   "title": "EffectRecordV1",
   "type": "object",
   "additionalProperties": false,

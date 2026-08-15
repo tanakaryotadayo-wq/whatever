@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "akashic.context-need/v1",
+  "$id": "https://akashic.dev/schemas/v1/context-need.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "request_id", "task_id", "logical_attempt_id", "expected_seq", "missing", "known_digests", "max_tokens"],

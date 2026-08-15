@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "akashic.routing-decision/v1",
+  "$id": "https://akashic.dev/schemas/v1/routing-decision.schema.json",
   "title": "RoutingDecisionV1",
   "type": "object",
   "additionalProperties": false,
