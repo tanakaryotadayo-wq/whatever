@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "akashic.effect-ledger/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "effect_key", "task_id", "logical_attempt_id", "expected_generation", "candidate_artifact_ref", "verification_report_ref", "adoption_ref"],
+  "properties": {
+    "schema": {"const": "akashic.effect-ledger/v1"},
+    "effect_key": {"type": "string", "minLength": 1},
+    "task_id": {"type": "string"},
+    "logical_attempt_id": {"type": "string"},
+    "expected_generation": {"type": "integer", "minimum": 0},
+    "candidate_artifact_ref": {"$ref": "akashic.artifact-ref/v1"},
+    "verification_report_ref": {"$ref": "akashic.artifact-ref/v1"},
+    "adoption_ref": {"$ref": "akashic.artifact-ref/v1"}
+  }
+}
