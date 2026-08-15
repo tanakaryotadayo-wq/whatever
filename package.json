@@ -9,13 +9,15 @@
     "doctor": "node scripts/doctor.mjs",
     "build": "npm run build --workspaces --if-present",
     "test:schemas": "node scripts/validate-schemas.mjs",
+    "test:knowledge": "node scripts/validate-knowledge-packets.mjs && npm --prefix experiments/orchestrator-bakeoff test",
     "test:core": "npm run test --workspaces --if-present",
     "test:gateway": "npm --prefix deploy/vercel-chatgpt-app test",
     "test:cloudflare": "npm --prefix deploy/cloudflare-kernel test",
-    "test": "npm run doctor && npm run test:schemas && npm run test:core && npm run test:gateway && npm run test:cloudflare",
+    "test": "npm run doctor && npm run test:schemas && npm run test:knowledge && npm run test:core && npm run test:gateway && npm run test:cloudflare",
     "test:p0": "npm run test:integration -w @akashic/temporal-workflow",
-    "test:codex-live": "bash scripts/codex-live-acceptance.sh"
+    "test:codex-live": "bash scripts/codex-live-acceptance.sh",
+    "test:drive-live": "npm run test:live -w @akashic/drive-adapter"
   },
-  "devDependencies": {"ajv": "latest"},
+  "devDependencies": {"ajv": "8.17.1"},
   "engines": {"node": ">=20"}
 }

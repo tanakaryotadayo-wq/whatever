@@ -1,0 +1,49 @@
+name: Akashic v0.8 knowledge packet integration
+
+on:
+  pull_request:
+    paths:
+      - '.agents/**'
+      - 'knowledge/**'
+      - 'plugins/**'
+      - 'packages/**'
+      - 'workflows/**'
+      - 'apps/temporal-runner/**'
+      - 'experiments/**'
+      - 'deploy/**'
+      - 'scripts/**'
+      - 'schemas/v1/**'
+      - 'docs/**'
+      - 'package*.json'
+      - '.github/workflows/akashic-v08-ci.yml'
+  push:
+    branches:
+      - 'akashic/v0.8-knowledge-packet-import'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install exact locked dependency graph
+        run: npm ci
+      - name: Dependency security gate
+        run: npm audit --audit-level=high
+      - run: npm run doctor
+      - run: npm run test:schemas
+      - run: npm run test:knowledge
+      - run: npm run test:core
+      - run: npm run test:p0
+      - name: Existing gateway tests
+        run: npm --prefix deploy/vercel-chatgpt-app test
+      - name: Existing Cloudflare conformance tests
+        run: npm --prefix deploy/cloudflare-kernel test

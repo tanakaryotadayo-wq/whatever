@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "akashic.task-capsule/v1",
+  "$id": "https://akashic.dev/schemas/v1/task-capsule.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "task_id", "context_id", "logical_attempt_id", "goal", "acceptance"],
@@ -11,7 +11,7 @@
     "logical_attempt_id": {"type": "string", "minLength": 1, "maxLength": 256},
     "goal": {"type": "string", "minLength": 1, "maxLength": 16000},
     "acceptance": {"type": "array", "minItems": 1, "maxItems": 64, "items": {"type": "string", "minLength": 1, "maxLength": 2048}},
-    "context_refs": {"type": "array", "items": {"$ref": "akashic.artifact-ref/v1"}},
+    "context_refs": {"type": "array", "items": {"$ref": "https://akashic.dev/schemas/v1/artifact-ref.schema.json"}},
     "execution_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
   }
 }

@@ -1,6 +1,7 @@
 import { defineQuery, defineUpdate } from "@temporalio/workflow";
+import { TASK_QUEUES, taskQueue } from "./task-queues.js";
 
-export const taskQueue = "akashic-agent-task-v1";
+export { TASK_QUEUES, taskQueue };
 export const submitTask = defineUpdate("akashic.submitTask");
 export const applyContextDelta = defineUpdate("akashic.applyContextDelta");
 export const requestCancel = defineUpdate("akashic.requestCancel");

@@ -1,40 +1,29 @@
-# whatever
+# Akashic Agent Operating Layer
 
-Build resilient language agents as graphs.
+Akashic decides **who executes what, with which context and authority, and which result is adopted as verified evidence**. It sits above replaceable durable workflow and Agent runtimes.
 
-## Sovereign Search
+## Canonical authority split
 
-This repository now includes a toolized `sovereign_search.py` surface for AI/CLI orchestration.
+- GitHub: source, CI, review and provenance.
+- Akashic: routing, ContextNeed/ContextPacketDelta, context compilation, policy, handoff, effect identity, verification and adoption.
+- Temporal: provisional P0 workflow authority.
+- Vercel Workflows and Cloudflare Workflows: bounded comparison candidates, not parallel authorities.
+- Drive/R2: content-addressed artifact, context and evidence storage/projections.
+- ChatGPT + authenticated MCP: operator and command surface.
 
-Core files:
+## Imported knowledge
 
-- `sovereign_search.py` — unified search engine over GitHub, Hugging Face, and Akashic DB.
-- `tools/sovereign_search_tool.py` — zero-MCP JSON CLI wrapper.
-- `tools/sovereign_search_mcp.py` — MCP server wrapper.
-- `.aicli/tools/sovereign_search.yaml` — AICLI tool declaration.
-- `schemas/sovereign_search.openai.tool.json` — OpenAI-style function tool schema.
-- `docs/sovereign_search.md` — usage and orchestration notes.
+The library-backed registry at `knowledge/packet-registry.json` tracks 30 external Knowledge Packets and their exact adoption state. v0.8 adds executable contracts for MCP Tasks projection, fast/durable routing, policy-as-code, CloudEvents/W3C trace context, context cache identity, provider session recovery, effect fencing, provenance and versioned verification. Reusable operating discipline lives under `.agents/skills/`.
 
-Quick check:
-
-```bash
-python3 tools/sovereign_search_tool.py --query "tauri pty session" --top 5
-```
-
-Self-test for the original engine:
+## Verify
 
 ```bash
-python3 sovereign_search.py --self-test
+npm install
+npm run doctor
+npm run test:schemas
+npm run test:knowledge
+npm run test:core
+npm run test:p0
 ```
 
-## Operating Doctrine
-
-This repository follows the **cognitive compiler** execution model:
-
-- **Shinon / GPT-5.5 Pro** = cognitive compiler. Compiles tasks using RAG and Sovereign Search.
-- **Sovereign Search** = compiler pass. Discovers public implementations with provenance.
-- **Codex** = subscription-authenticated executor. Executes task capsules in a sandboxed workspace.
-
-Design principle: **強いまま構造で壊れなくする** — do not weaken for safety. Use structural integrity instead.
-
-See [docs/cognitive_compiler.md](docs/cognitive_compiler.md) for the full architecture.
+The real Codex provider certification remains a separate fail-closed test because fixture success is not provider proof.

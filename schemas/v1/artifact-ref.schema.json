@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "akashic.artifact-ref/v1",
+  "$id": "https://akashic.dev/schemas/v1/artifact-ref.schema.json",
   "title": "ArtifactRefV1",
   "type": "object",
   "additionalProperties": false,
