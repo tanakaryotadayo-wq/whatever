@@ -1,0 +1,58 @@
+{
+  "schema": "akashic.asset-ledger/v1",
+  "generated_at": "2026-08-16T00:00:00Z",
+  "canonical_repository": "tanakaryotadayo-wq/whatever",
+  "canonical_branch": "akashic/v0.7-canonical-final",
+  "assets": [
+    {
+      "asset_id": "github-main",
+      "source": "github",
+      "ref": "main@05c58ed7a81e479d9074823e8a8207816cff3b15",
+      "status": "ADOPT_BASE_HISTORY",
+      "target": "repository history",
+      "reason": "Preserve original A2A worker, schemas, docs and CI provenance."
+    },
+    {
+      "asset_id": "github-v06-gateway",
+      "source": "github",
+      "ref": "akashic/v0.6-cloud-gateway@9ddaa6b03ec246ab15391a9eaabe7930192335c7",
+      "status": "ADOPT",
+      "target": "deploy/",
+      "reason": "Working Vercel MCP gateway and cloud topology scaffold."
+    },
+    {
+      "asset_id": "github-hardening",
+      "source": "github",
+      "ref": "7eb276effee7b3ea56afbcc0ffdf44363ac4e640",
+      "status": "ADOPT_BASE",
+      "target": "branch parent",
+      "reason": "Contains SSRF/DoS/depth/auth hardening and focused tests."
+    },
+    {
+      "asset_id": "drive-stateful-v06",
+      "source": "google-drive",
+      "ref": "A2A_stateful_ai_worker_v0_6.zip",
+      "sha256": "4b7a7e0145934b14dc2d90f65d871941911abeffa0513e838fdd9a77962b633c",
+      "status": "RECOVERY_REQUIRED",
+      "target": "legacy/stateful-worker-v0.6",
+      "reason": "Import only after digest verification; Drive is artifact/evidence authority, not source authority."
+    },
+    {
+      "asset_id": "drive-stateful-v06-patch",
+      "source": "google-drive",
+      "ref": "A2A_stateful_ai_worker_v0_6.patch",
+      "sha256": "4915ffd1aced0a43bcf6cce5d4073b871a48c81c257b61798ba3848a34676c32",
+      "status": "RECOVERY_REQUIRED",
+      "target": "recovery/incoming",
+      "reason": "Apply only when patch base and digest are verified."
+    },
+    {
+      "asset_id": "external-knowledge-packets",
+      "source": "google-drive",
+      "ref": "research/akashic_external_knowledge_packets_2026-08-16",
+      "status": "REFERENCE",
+      "target": "docs/decisions",
+      "reason": "Research input, not executable source."
+    }
+  ]
+}
