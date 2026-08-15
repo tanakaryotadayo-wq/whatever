@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://akashic.local/schemas/workspace-v1.json",
+  "type": "object",
+  "required": ["schema", "name", "source_authority", "profiles", "commands"],
+  "properties": {
+    "schema": {"const": "akashic.workspace/v1"},
+    "name": {"type": "string", "minLength": 1},
+    "source_authority": {
+      "type": "object",
+      "required": ["provider", "repository", "canonical_branch", "integration_branch"],
+      "properties": {
+        "provider": {"const": "github"},
+        "repository": {"type": "string", "minLength": 1},
+        "canonical_branch": {"type": "string", "minLength": 1},
+        "integration_branch": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "profiles": {"type": "object"},
+    "commands": {"type": "object"}
+  },
+  "additionalProperties": false
+}
