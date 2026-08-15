@@ -15,7 +15,8 @@
     "test:cloudflare": "npm --prefix deploy/cloudflare-kernel test",
     "test": "npm run doctor && npm run test:schemas && npm run test:knowledge && npm run test:core && npm run test:gateway && npm run test:cloudflare",
     "test:p0": "npm run test:integration -w @akashic/temporal-workflow",
-    "test:codex-live": "bash scripts/codex-live-acceptance.sh"
+    "test:codex-live": "bash scripts/codex-live-acceptance.sh",
+    "test:drive-live": "npm run test:live -w @akashic/drive-adapter"
   },
   "devDependencies": {"ajv": "8.17.1"},
   "engines": {"node": ">=20"}

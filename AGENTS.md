@@ -12,5 +12,7 @@ Akashic owns routing, context negotiation/compilation, capability and policy, ha
 - External effects require an idempotency/effect key and generation fencing.
 - Candidate artifacts are never adopted before digest-bound provenance and versioned verification pass.
 - A stale context delta cannot revive or mutate a task.
-- Drive mailbox folders are projections/offline bridges, never the task state authority.
-- Official-provider live tests must not be reported as passing unless the real binary and authenticated session were used.
+- Drive immutable writes verify SHA-256 and size, publish from staging, and use `appProperties` only as an index.
+- Drive status projections reject lower `state_seq` values and remain rebuildable from Workflow state.
+- Drive mailbox files are write-once handoff envelopes; folders are never queue leases or task authority.
+- Official-provider live tests must not be reported as passing unless the real credentials/binary and authenticated session were used.

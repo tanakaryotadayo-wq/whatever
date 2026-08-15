@@ -6,138 +6,65 @@ Target: `akashic/v0.8-knowledge-packet-import`
 
 ## Rule
 
-This registry imports mechanisms, not marketing claims. A packet is only `IMPORTED` when it has a concrete contract, implementation path, and test. Platform-specific packets remain experiments until the same Akashic scenario passes with evidence.
-
-## This branch imports
-
-- MCP Tasks semantic projection without adopting blocking `tasks/result` behavior.
-- Deterministic fast/durable routing receipts.
-- Policy-as-code with executable test vectors and default-deny mutation behavior.
-- CloudEvents-compatible projection envelopes and W3C trace context validation.
-- Agent provenance, versioned verification reports, and adoption precondition checks.
-- Three-zone context sections and deterministic query-time cache keys.
-- Provider session capability and fail-closed recovery decisions.
-- Stable effect identity, generation fencing, and idempotent completion contracts.
-- Skills that make routing, context, verification, and adoption discipline reusable.
-- A bounded orchestrator bake-off scenario and scorecard.
-- Temporal Worker Deployment Versioning with immutable build IDs, PINNED workflows, and distinct Workflow/Context/Agent/Assurance Task Queues.
-
-## Explicit non-imports
-
-- No second authoritative TaskStore.
-- No Drive folder-move queue.
-- No large bodies in workflow history.
-- No default multi-agent topology.
-- No autonomous memory rewrite.
-- No deprecated Temporal `buildId + useVersioning` API.
-- No claim that Vercel, Temporal, or Cloudflare has won before the fixed bake-off completes.
+Import mechanisms, not marketing claims. A packet is `IMPORTED` only with a concrete contract, implementation path and test.
 
 ## IMPORT_THIS_BRANCH
 
-| Packet | Mechanism | Target |
-|---|---|---|
-| KPK-001 | Akashic Private Plugin: Skills + MCP server | `.agents/skills/`<br>`knowledge/PACKET_ADOPTION_MATRIX.md` |
-| KPK-002 | MCP Tasks compatibility surface | `packages/contracts/src/mcp-tasks.js` |
-| KPK-008 | Agent provenance plus verification/adoption gate | `packages/contracts/src/provenance.js` |
-| KPK-009 | Pinned Workflow versions and independent Activity Task Queues | `workflows/temporal/src/worker-deployment.js`<br>`workflows/temporal/src/task-queues.js`<br>`workflows/temporal/src/worker-topology.js`<br>`docs/ADR-0005-TEMPORAL-WORKER-DEPLOYMENTS.md` |
-| KPK-011 | Three-zone context workspace | `packages/contracts/src/context-memory.js` |
-| KPK-012 | Query-time selective memory construction | `packages/contracts/src/context-memory.js` |
-| KPK-013 | Policy-as-code with executable test vectors | `packages/contracts/src/policy.js` |
-| KPK-014 | CloudEvents projections plus W3C trace context | `packages/contracts/src/events.js` |
-| KPK-016 | OpenLineage-inspired context and artifact lineage | `packages/contracts/src/provenance.js` |
-| KPK-019 | Fast lane versus durable lane router | `packages/contracts/src/routing.js` |
-| KPK-023 | Agent session capability matrix | `packages/contracts/src/sessions.js` |
+- KPK-001 — Private Plugin / Skills + MCP server: `.agents/skills/`, `plugins/akashic/`
+- KPK-002 — MCP Tasks compatibility: `packages/contracts/src/mcp-tasks.js`
+- KPK-008 — Provenance and verification/adoption gate: `packages/contracts/src/provenance.js`
+- KPK-009 — Worker Deployment Versioning and role Task Queues: `workflows/temporal/src/{worker-deployment,task-queues,worker-topology}.js`, `docs/ADR-0005-*`
+- KPK-010 — Drive immutable adapter and mailbox projection: `packages/drive-adapter/`, `schemas/v1/drive-mailbox-envelope.schema.json`, `docs/ADR-0006-*`
+- KPK-011 — Three-zone context: `packages/contracts/src/context-memory.js`
+- KPK-012 — Query-time selective memory: `packages/contracts/src/context-memory.js`
+- KPK-013 — Policy-as-code: `packages/contracts/src/policy.js`
+- KPK-014 — CloudEvents / W3C trace: `packages/contracts/src/events.js`
+- KPK-016 — Unified lineage/provenance: `packages/contracts/src/provenance.js`
+- KPK-019 — Fast/durable lane router: `packages/contracts/src/routing.js`
+- KPK-023 — Session capability matrix: `packages/contracts/src/sessions.js`
 
 ## HARDEN_THIS_BRANCH
 
-| Packet | Mechanism | Target |
-|---|---|---|
-| KPK-006 | Stable Effect Ledger and fenced artifact adoption | `packages/contracts/src/effects.js`<br>`workflows/temporal/src/activities.js` |
+- KPK-006 — Effect Ledger and fenced adoption: `packages/contracts/src/effects.js`, `workflows/temporal/src/activities.js`
 
 ## ALREADY_IMPLEMENTED
 
-| Packet | Mechanism | Target |
-|---|---|---|
-| KPK-003 | Temporal Update CAS for ContextPacketDelta | `workflows/temporal/src/workflows.js` |
-| KPK-004 | Update-With-Start for idempotent submit | `apps/temporal-runner/src/rpc.js` |
-| KPK-007 | OCI-inspired ArtifactRefV1 | `packages/contracts/src/index.js` |
+- KPK-003 — Temporal Update CAS
+- KPK-004 — Update-With-Start
+- KPK-007 — OCI-inspired ArtifactRef
 
-## PARTIAL_VIA_MCP_TASKS
+## PARTIAL / PROVIDER GATES
 
-| Packet | Mechanism | Target |
-|---|---|---|
-| KPK-015 | A2A semantic compatibility without full binding | `packages/contracts/src/mcp-tasks.js` |
+- KPK-005 — one Codex turn per Activity; official binary live evidence remains open
+- KPK-015 — A2A semantics through MCP Tasks projection
+- KPK-017 — Codex lifecycle reconciliation deferred to provider gate
+- KPK-020 — MCP elicitation deferred to client support
+- KPK-021 — Multi-agent admission deferred until single-agent path is closed
 
-## PARTIAL_PROVIDER_GATE
+## EXPERIMENT
 
-| Packet | Mechanism | Target |
-|---|---|---|
-| KPK-005 | One Codex turn per Activity with session reconciliation | `workflows/temporal/src/workflows.js`<br>`scripts/codex-live-acceptance.sh` |
-
-## IMPORT_EXPERIMENT_HARNESS
-
-| Packet | Mechanism | Target |
-|---|---|---|
-| KPK-026 | Temporal versus Vercel/Cloudflare orchestrator bake-off | `experiments/orchestrator-bakeoff/` |
+- KPK-026 — fixed Temporal / Vercel / Cloudflare bake-off harness: `experiments/orchestrator-bakeoff/`
 
 ## NEXT_IMPLEMENTATION
 
-| Packet | Mechanism | Target |
-|---|---|---|
-| KPK-010 | Drive immutable artifact adapter and mailbox projection | `knowledge/PACKET_ADOPTION_MATRIX.md` |
-| KPK-018 | Saga compensation registry | `knowledge/PACKET_ADOPTION_MATRIX.md` |
-| KPK-022 | Verification flywheel from traces and corrections | `knowledge/PACKET_ADOPTION_MATRIX.md` |
+- KPK-018 — Saga compensation registry, only for real reversible effects
+- KPK-022 — Verification/eval flywheel from traces and corrections
 
-## DEFER_PROVIDER_GATE
+## DEFER / REJECT
 
-| Packet | Mechanism | Target |
-|---|---|---|
-| KPK-017 | Codex lifecycle reconciliation loop | `knowledge/PACKET_ADOPTION_MATRIX.md` |
-
-## DEFER_CLIENT_SUPPORT
-
-| Packet | Mechanism | Target |
-|---|---|---|
-| KPK-020 | MCP elicitation mode split | `knowledge/PACKET_ADOPTION_MATRIX.md` |
-
-## DEFER_AFTER_SINGLE_AGENT
-
-| Packet | Mechanism | Target |
-|---|---|---|
-| KPK-021 | Multi-agent admission control and explicit handoff contracts | `knowledge/PACKET_ADOPTION_MATRIX.md` |
-
-## DEFER_UNTIL_HISTORY_PRESSURE
-
-| Packet | Mechanism | Target |
-|---|---|---|
-| KPK-024 | Context checkpoints plus Continue-As-New | `knowledge/PACKET_ADOPTION_MATRIX.md` |
-
-## DEFER_UNTIL_DUAL_WRITE
-
-| Packet | Mechanism | Target |
-|---|---|---|
-| KPK-025 | Transactional outbox only at real dual-write boundaries | `knowledge/PACKET_ADOPTION_MATRIX.md` |
-
-## REJECT_DUPLICATE_REFS_FIRST
-
-| Packet | Mechanism | Target |
-|---|---|---|
-| KPK-027 | Temporal external payload storage | `knowledge/PACKET_ADOPTION_MATRIX.md` |
-
-## DEFER
-
-| Packet | Mechanism | Target |
-|---|---|---|
-| KPK-028 | Codex exec-server transport | `knowledge/PACKET_ADOPTION_MATRIX.md` |
-| KPK-029 | Autonomous memory repository and reflection | `knowledge/PACKET_ADOPTION_MATRIX.md` |
-| KPK-030 | Parallel and agent-triggered context compaction | `knowledge/PACKET_ADOPTION_MATRIX.md` |
+- KPK-024 — Continue-As-New until measured history pressure
+- KPK-025 — transactional outbox until a real dual-write boundary
+- KPK-027 — reject duplicate external-payload layer; refs-first already exists
+- KPK-028 — Codex exec-server transport
+- KPK-029 — autonomous memory repository
+- KPK-030 — parallel/agent-triggered compaction
 
 ## Acceptance gates
 
-1. Contract tests prove deterministic mapping, default-deny policy, trace validation, provenance subject matching, stale-fence rejection, queue isolation, and deployment-version validation.
-2. Existing Temporal CAS and Update-With-Start tests remain green across distinct role queues.
-3. All Temporal SDK packages are pinned to the same exact version.
-4. Production versioning uses Worker Deployment Versioning with immutable build IDs and PINNED behavior.
-5. Skills contain no provider secrets and never authorize mutations by prose alone.
-6. Bake-off results are stored as evidence; a platform does not win by documentation comparison.
-7. `packet-registry.json` remains the machine-readable adoption record.
+1. Deterministic mapping, policy, trace, provenance, stale-fence and queue-isolation tests pass.
+2. Drive tests prove digest verification, staging compensation, dedup, stale-projection rejection, mailbox write-once behavior, Changes cursor paging and bounded retry.
+3. Existing Temporal CAS and Update-With-Start remain green across distinct role queues.
+4. All Temporal SDK packages and `@googleapis/drive` are pinned to exact versions.
+5. Live provider tests remain explicit, credential-gated and fail-closed.
+6. A workflow backend does not win by documentation comparison.
+7. All KPK-001 through KPK-030 remain represented in this matrix and `packet-registry.json`.
