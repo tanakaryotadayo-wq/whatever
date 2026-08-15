@@ -1,45 +1,38 @@
-# Akashic deployment decision v0.6
+# Deployment Decision — v0.7 Canonicalization
 
-**Decision:** split the public gateway, durable task authority, execution runner, source plane, and artifact plane. Do not force all five into one hosting product.
+Status: **ADOPTED on integration branch**
+
+## Authority split
+
+| Plane | Authority |
+|---|---|
+| Source / CI / review | GitHub |
+| Durable workflow lifecycle | Temporal |
+| ChatGPT MCP / HTTPS ingress | Vercel |
+| Agent execution | Codex / Claude / local workers on Titan Core or authenticated VM |
+| Artifact / context / evidence bytes | Google Drive or R2 |
+| Cognitive working set | ChatGPT Project Sources |
+| Optional operator read model | Firebase / Firestore, rebuildable from Temporal |
+
+## Decisions
+
+1. Cloudflare Durable Objects are not a concurrent TaskStore. The existing scaffold is retained only as a contract-conformance experiment.
+2. Drive mailbox folders are projections and offline handoff surfaces, not queue authority.
+3. Agent turns are Activities. Waiting for ContextPacketDelta occurs inside the Workflow through a validated Update.
+4. Vercel does not execute agents and does not hold long-running task state.
+5. Artifact bodies stay out of Temporal history; workflows carry content-addressed references.
+6. Candidate output is immutable, independently verified, then adopted under an effect key and fencing generation.
+
+## Required completion gates
 
 ```text
-ChatGPT / Sites
-      │
-      ▼
-Vercel MCP gateway
-      │
-      ▼
-Akashic runner registration
-  ├─ local/VM runner: subscription-auth Codex / Claude / local AI
-  └─ cloud sandbox runner: API-auth build/test
-      │
-      ▼
-Cloudflare durable Kernel candidate
-Durable Objects / Workflows / R2
-      │
-  ┌───┴────┐
-  ▼        ▼
-GitHub   Google Drive
-source   artifacts/evidence
+contract freeze
+→ fixture Temporal two-turn
+→ stale CAS rejection
+→ cancellation/restart/fault tests
+→ official Codex same-thread live two-turn
+→ Drive live adapter acceptance
+→ Vercel/ChatGPT authenticated mutation path
 ```
 
-## Fixed roles
-
-- **Vercel:** public HTTPS MCP/API ingress and optional sandbox build/test; not the sole durable TaskStore.
-- **Cloudflare:** next durable Kernel target; Worker + Durable Objects + Workflows/Queues + R2 + Sandbox/Containers.
-- **ChatGPT Sites:** operator console only, never the secret-bearing state authority.
-- **GitHub:** source, review, commit/tree identities and CI; not a long-lived agent server.
-- **Google Drive:** release/evidence/build-capsule mirror; not a transactional TaskStore.
-- **WASM:** deterministic Context Plane utilities; not a CLI process supervisor.
-- **local/VM:** subscription-authenticated provider workers.
-
-## Deployment order
-
-1. Deploy Vercel gateway to native `vercel.app` URL.
-2. Keep mutations disabled until auth is explicit.
-3. Register an authenticated runner URL.
-4. Connect `/api/mcp` in ChatGPT Developer Mode.
-5. Build Sites console against the gateway.
-6. Deploy Cloudflare to `workers.dev`; custom DNS last.
-
-A provider execution is not called live until the official binary/SDK completes a real round trip in that environment.
+A passing fixture or CI run must not be reported as proof of the official Codex, Drive, or production ChatGPT gates.
