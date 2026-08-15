@@ -1,0 +1,1 @@
+export default function Page(){return <main style={{maxWidth:800,margin:"40px auto",padding:24}}><h1>Akashic ChatGPT Gateway v0.6</h1><p>Stateless MCP control gateway. Durable task state remains in the registered Akashic runner.</p><ul><li><a href="/api/health">/api/health</a></li><li>/api/mcp</li></ul></main>}

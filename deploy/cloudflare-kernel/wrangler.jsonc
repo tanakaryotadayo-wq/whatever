@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "akashic-kernel",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TASK_KERNEL",
+        "class_name": "TaskKernel"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["TaskKernel"]
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

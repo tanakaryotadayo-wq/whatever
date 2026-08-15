@@ -1,0 +1,32 @@
+{
+  "schema": "akashic.sites-console/v1",
+  "role": "operator-ui",
+  "state_authority": false,
+  "required_views": [
+    "gateway-health",
+    "task-submit-review",
+    "task-timeline",
+    "input-required",
+    "artifact-references"
+  ],
+  "required_state_labels": [
+    "SUBMITTED",
+    "WORKING",
+    "INPUT_REQUIRED",
+    "COMPLETED",
+    "FAILED",
+    "CANCELED"
+  ],
+  "forbidden_client_secrets": [
+    "AKASHIC_RUNNER_TOKEN",
+    "GOOGLE_REFRESH_TOKEN",
+    "GITHUB_TOKEN",
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY"
+  ],
+  "backend": {
+    "health_path": "/api/health",
+    "mcp_path": "/api/mcp",
+    "mutations_default": false
+  }
+}

@@ -1,0 +1,1 @@
+export const dynamic="force-dynamic";export async function GET(){return Response.json({ok:true,service:"akashic-chatgpt-gateway",version:"0.6.0",mcp:"/api/mcp",runner_configured:Boolean(process.env.AKASHIC_RUNNER_URL),mutations_enabled:String(process.env.AKASHIC_MUTATIONS_ENABLED??"false").toLowerCase()==="true"})}
