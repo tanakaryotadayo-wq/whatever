@@ -1,1 +1,0 @@
-batch tool check
