@@ -1,0 +1,99 @@
+name: Akashic v0.7 Core Closure
+
+on:
+  push:
+    branches:
+      - akashic/v0.7-canonical-temporal-final
+  pull_request:
+    paths:
+      - "AGENTS.md"
+      - "akashic.workspace.json"
+      - "schemas/**"
+      - "packages/**"
+      - "workers/**"
+      - "adapters/**"
+      - "workflows/**"
+      - "deploy/**"
+      - "scripts/**"
+      - "tests/**"
+      - ".github/workflows/akashic-v07-ci.yml"
+
+concurrency:
+  group: akashic-v07-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  python-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install pytest jsonschema
+      - run: python scripts/doctor.py
+      - run: python -m pytest -q tests packages/runtime/test adapters/drive/test
+
+  temporal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: workflows/temporal/package-lock.json
+      - working-directory: workflows/temporal
+        run: npm install --no-audit --no-fund
+      - working-directory: workflows/temporal
+        run: npm run check
+      - working-directory: workflows/temporal
+        run: npm test
+
+  gateway:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: deploy/vercel-chatgpt-app/package-lock.json
+      - working-directory: deploy/vercel-chatgpt-app
+        run: npm install --no-audit --no-fund
+      - working-directory: deploy/vercel-chatgpt-app
+        run: npm test
+      - working-directory: deploy/vercel-chatgpt-app
+        run: npm run build
+
+  cloudflare-conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: deploy/cloudflare-kernel/package-lock.json
+      - working-directory: deploy/cloudflare-kernel
+        run: npm install --no-audit --no-fund
+      - working-directory: deploy/cloudflare-kernel
+        run: npm test
+
+  evidence:
+    needs: [python-contracts, temporal, gateway, cloudflare-conformance]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/validate_p0_evidence.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: akashic-v07-core-evidence
+          path: .akashic-evidence/p0/manifest.json
+          if-no-files-found: error
