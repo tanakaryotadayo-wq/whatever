@@ -1,0 +1,34 @@
+name: Akashic Official Codex Live Acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      timeout_seconds:
+        description: Codex app-server timeout
+        required: false
+        default: "600"
+
+permissions:
+  contents: read
+
+jobs:
+  official-codex-two-turn:
+    runs-on: [self-hosted, macOS, akashic-codex]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify authenticated official Codex binary
+        run: |
+          command -v codex
+          codex --version
+      - name: Run same-thread Context Delta acceptance
+        env:
+          AKASHIC_LIVE_CODEX: "1"
+          CODEX_LIVE_TIMEOUT: ${{ inputs.timeout_seconds }}
+        run: python3 scripts/codex_live_two_turn.py --evidence-dir .akashic-evidence/codex-live
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: akashic-official-codex-live-evidence
+          path: .akashic-evidence/codex-live
+          if-no-files-found: error
