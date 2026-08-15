@@ -1,51 +1,38 @@
-# DNS and endpoint runbook v0.6
+# Endpoint Runbook — v0.7
 
-## Rule zero
+## Endpoints
 
-Prove the native hosted URL first:
+| Endpoint | Purpose | Public |
+|---|---|---|
+| Vercel `/api/health` | gateway configuration health | yes, non-secret |
+| Vercel `/api/mcp` | ChatGPT MCP ingress | yes, authenticated by ChatGPT/App policy |
+| Temporal control `/healthz` | control bridge health | restricted |
+| Temporal control `/a2a` | tasks/send|get|update|cancel compatibility bridge | restricted, bearer auth |
+| Temporal Service `7233` | Workflow client/worker connection | never exposed as public HTTP |
 
-- Vercel: `https://<deployment>.vercel.app/api/health`
-- Cloudflare: `https://<worker>.<subdomain>.workers.dev/healthz`
-- Sites: generated production Site URL
+## Bring-up order
 
-Only add custom DNS after the endpoint and authentication work on the native URL.
+1. Start Temporal local development server or connect to Temporal Cloud.
+2. Start the Workflow Worker on task queue `akashic-v07`.
+3. Start the authenticated Temporal Control Server.
+4. Verify control `/healthz` from the Vercel execution environment.
+5. Set `AKASHIC_CONTROL_URL`, token, and host allowlist in Vercel preview.
+6. Keep `AKASHIC_MUTATIONS_ENABLED=false`; connect ChatGPT and verify read-only status.
+7. Enable mutations only for an authenticated preview and submit a bounded fixture task.
+8. Promote only after query, Context Delta Update, cancellation, and artifact evidence pass.
 
-## Vercel
+## DNS policy
 
-1. Deploy and test `/api/health` and `/api/mcp` on `vercel.app`.
-2. Add one hostname to one Vercel project.
-3. Remove stale A/AAAA/CNAME records for that exact hostname.
-4. Copy the project-specific record Vercel provides.
-5. Check CAA only if certificate issuance fails.
-6. Do not point the same hostname at Sites or Cloudflare simultaneously.
+- Use platform-generated hostnames before custom DNS.
+- The Vercel hostname is the only required public endpoint for ChatGPT.
+- The control service should use private networking, authenticated tunnel, or a narrowly exposed HTTPS hostname.
+- Do not publish a local Codex Worker port.
+- Do not point the Gateway at both Temporal and Cloudflare Task kernels.
 
-## Cloudflare Worker
+## Rollback
 
-Choose one mode:
-
-- **Custom Domain:** Worker is the origin. Requires an active Cloudflare zone.
-  Cloudflare creates the record and certificate. The hostname cannot already
-  contain a conflicting CNAME.
-- **Route:** Worker runs in front of an existing origin. A proxied DNS record must
-  already exist; otherwise requests can fail before reaching the Worker.
-
-For Akashic's first Cloudflare deployment, use `workers.dev`, then attach a new
-subdomain such as `kernel.example.com` after removing conflicts.
-
-## Sites
-
-Use the generated Site URL first. When custom domains are available, Sites gives
-specific DNS records. Copy those exact records and avoid reusing a hostname that
-already belongs to Vercel or Cloudflare.
-
-## Recommended hostnames
-
-```text
-console.example.com  -> ChatGPT Sites operator UI
-mcp.example.com      -> Vercel ChatGPT MCP gateway
-kernel.example.com   -> Cloudflare durable Kernel
-runner.example.com   -> authenticated local/VM runner tunnel
-```
-
-Keeping one role per hostname avoids the CNAME collisions that commonly derail
-multi-platform setups.
+1. Set `AKASHIC_MUTATIONS_ENABLED=false`.
+2. Revert Vercel to the prior deployment.
+3. Leave Temporal histories intact for diagnosis.
+4. Stop Activity Workers if an external side effect is suspected.
+5. Reconcile effect ledger, artifact digests, and adoption generation before retry.
