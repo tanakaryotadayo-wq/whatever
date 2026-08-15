@@ -59,18 +59,29 @@ test("transition to terminal state is idempotent (no re-application)", () => {
   }
 });
 
-test("stale context delta is rejected (wrong expected_seq)", () => {
-  const snapshot = {
+test("stale context delta is rejected (wrong expected_seq)", async () => {
+  const { TaskKernel } = await import("../src/index.js");
+  let stored = {
     task_id: "task-1",
+    attempt_id: "a1",
     state: "INPUT_REQUIRED",
     terminal: false,
     seq: 5,
     context_need: { request_id: "req-1" },
     events: [],
   };
+  const ctx = { storage: { get: async () => stored, put: async (_, v) => { stored = v; } } };
+  const kernel = new TaskKernel(ctx, {});
   const staleDelta = { task_id: "task-1", attempt_id: "a1", expected_seq: 4, request_id: "req-1", packet_id: "p1" };
-  // expected_seq must equal snapshot.seq to be accepted
-  assert.notEqual(staleDelta.expected_seq, snapshot.seq);
+  const req = new Request("http://do/context", {
+    method: "POST",
+    body: JSON.stringify({ context_delta: staleDelta }),
+    headers: { "content-type": "application/json" },
+  });
+  const res = await kernel.fetch(req);
+  const body = await res.json();
+  assert.equal(res.status, 409);
+  assert.equal(body.error, "stale_context_delta");
 });
 
 test("appendEvent event log is capped at 256 entries", () => {
