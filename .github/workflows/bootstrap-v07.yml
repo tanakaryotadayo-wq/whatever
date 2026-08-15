@@ -1,0 +1,193 @@
+name: Bootstrap canonical v0.7
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - akashic/v0.7-canonical-temporal
+    paths:
+      - .github/workflows/bootstrap-v07.yml
+      - .bootstrap-v07/**
+
+permissions:
+  contents: write
+
+concurrency:
+  group: akashic-v07-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout bootstrap branch
+        uses: actions/checkout@v4
+        with:
+          ref: akashic/v0.7-canonical-temporal
+          fetch-depth: 0
+
+      - name: Reconstruct and extract bounded overlay stream
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t CHUNKS < <(find .bootstrap-v07 -maxdepth 1 -type f -name 'chunk-*.b64' | sort)
+          test "${#CHUNKS[@]}" -eq 13
+          cat "${CHUNKS[@]}" | tr -d '\n\r' > /tmp/akashic-v07-prefix.b64
+          test "$(wc -c < /tmp/akashic-v07-prefix.b64)" -eq 190000
+          base64 --decode /tmp/akashic-v07-prefix.b64 > /tmp/akashic-v07-prefix.zip
+          test "$(wc -c < /tmp/akashic-v07-prefix.zip)" -eq 142500
+          rm -rf /tmp/akashic-v07-overlay
+          mkdir -p /tmp/akashic-v07-overlay
+          python - <<'PY'
+          from __future__ import annotations
+
+          import binascii
+          import json
+          import struct
+          import zlib
+          from pathlib import Path, PurePosixPath
+
+          payload = Path('/tmp/akashic-v07-prefix.zip').read_bytes()
+          output = Path('/tmp/akashic-v07-overlay')
+          offset = 0
+          extracted: list[dict[str, object]] = []
+          LOCAL = 0x04034B50
+
+          while offset + 30 <= len(payload):
+              signature = struct.unpack_from('<I', payload, offset)[0]
+              if signature != LOCAL:
+                  break
+              (
+                  _signature,
+                  version_needed,
+                  flags,
+                  method,
+                  modified_time,
+                  modified_date,
+                  expected_crc,
+                  compressed_size,
+                  uncompressed_size,
+                  name_length,
+                  extra_length,
+              ) = struct.unpack_from('<IHHHHHIIIHH', payload, offset)
+              if flags & 0x0008:
+                  raise SystemExit('data-descriptor ZIP entries are not accepted')
+              name_start = offset + 30
+              name_end = name_start + name_length
+              data_start = name_end + extra_length
+              data_end = data_start + compressed_size
+              if data_end > len(payload):
+                  raise SystemExit(f'truncated local entry at byte {offset}')
+              name = payload[name_start:name_end].decode('utf-8')
+              pure = PurePosixPath(name)
+              if not name or pure.is_absolute() or '..' in pure.parts:
+                  raise SystemExit(f'unsafe ZIP path: {name!r}')
+              compressed = payload[data_start:data_end]
+              if method == 0:
+                  raw = compressed
+              elif method == 8:
+                  raw = zlib.decompress(compressed, -15)
+              else:
+                  raise SystemExit(f'unsupported compression method {method}: {name}')
+              if len(raw) != uncompressed_size:
+                  raise SystemExit(f'uncompressed size mismatch: {name}')
+              actual_crc = binascii.crc32(raw) & 0xFFFFFFFF
+              if actual_crc != expected_crc:
+                  raise SystemExit(f'CRC mismatch: {name}')
+              destination = output.joinpath(*pure.parts)
+              if name.endswith('/'):
+                  destination.mkdir(parents=True, exist_ok=True)
+              else:
+                  destination.parent.mkdir(parents=True, exist_ok=True)
+                  destination.write_bytes(raw)
+              extracted.append({
+                  'path': name,
+                  'crc32': f'{actual_crc:08x}',
+                  'size': len(raw),
+                  'compressed_size': compressed_size,
+                  'method': method,
+                  'version_needed': version_needed,
+                  'modified_time': modified_time,
+                  'modified_date': modified_date,
+              })
+              offset = data_end
+
+          if len(extracted) != 167:
+              raise SystemExit(f'expected 167 complete local entries, extracted {len(extracted)}')
+          if offset > len(payload):
+              raise SystemExit('parser advanced beyond supplied prefix')
+          manifest = {
+              'schema': 'akashic.bootstrap-extraction/v1',
+              'source_prefix_bytes': len(payload),
+              'entry_count': len(extracted),
+              'local_entry_bytes_consumed': offset,
+              'remaining_prefix_bytes': len(payload) - offset,
+              'entries': extracted,
+          }
+          (output / 'recovery' / 'BOOTSTRAP_EXTRACTION_MANIFEST.json').parent.mkdir(parents=True, exist_ok=True)
+          (output / 'recovery' / 'BOOTSTRAP_EXTRACTION_MANIFEST.json').write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps({
+              'entry_count': len(extracted),
+              'local_entry_bytes_consumed': offset,
+              'source_prefix_bytes': len(payload),
+          }))
+          PY
+          rsync -a /tmp/akashic-v07-overlay/ ./
+          rm -rf .bootstrap-v07
+          rm -f .github/workflows/bootstrap-v07.yml
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Python validation dependencies
+        run: python -m pip install --upgrade pip pytest jsonschema
+
+      - name: Validate contracts, runtime primitives, and recovered worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/doctor.py
+          python tools/validate_contracts.py
+          python -m compileall -q runtime tools workers tests
+          python -m pytest tests runtime/tests -q
+
+      - name: Validate Vercel gateway
+        working-directory: deploy/vercel-chatgpt-app
+        run: |
+          npm install --no-audit --no-fund
+          npm test
+
+      - name: Validate Cloudflare conformance backend
+        working-directory: deploy/cloudflare-kernel
+        run: |
+          npm install --no-audit --no-fund
+          npm test
+
+      - name: Validate Temporal vertical slice
+        working-directory: orchestration/temporal
+        run: |
+          npm install --no-audit --no-fund
+          npm test
+          npm run test:integration
+
+      - name: Commit canonical source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'akashic-bootstrap[bot]'
+          git config user.email 'akashic-bootstrap[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'feat(akashic): recover canonical v0.7 Temporal vertical slice'
+          git push origin HEAD:akashic/v0.7-canonical-temporal
