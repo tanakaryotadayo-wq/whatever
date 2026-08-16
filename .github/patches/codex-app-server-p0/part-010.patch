@@ -1,0 +1,218 @@
++          { reasoningEffort: "medium", description: "medium" },
++          { reasoningEffort: "high", description: "high" },
++        ],
++        defaultReasoningEffort: "medium",
++        serviceTiers: [{ id: "standard", name: "Standard", description: "mock" }],
++        defaultServiceTier: "standard",
++        isDefault: true,
++      }],
++      nextCursor: null,
++    });
++    return;
++  }
++  if (message.method === "thread/start") {
++    threadCounter += 1;
++    const threadId = `thread-${threadCounter}`;
++    const thread = {
++      id: threadId,
++      preview: "",
++      modelProvider: "mock",
++      createdAt: Math.floor(Date.now() / 1000),
++      updatedAt: Math.floor(Date.now() / 1000),
++      status: { type: "idle" },
++      path: null,
++      cwd: message.params.cwd,
++      ephemeral: true,
++      turns: [],
++    };
++    threads.set(threadId, { cwd: message.params.cwd, turns: [] });
++    respond(message.id, {
++      thread,
++      model: message.params.model ?? "mock-model",
++      modelProvider: "mock",
++      serviceTier: message.params.serviceTier ?? "standard",
++      cwd: message.params.cwd,
++      instructionSources: [],
++      approvalPolicy: "never",
++      approvalsReviewer: "user",
++      sandbox: { type: "workspaceWrite" },
++      reasoningEffort: "medium",
++    });
++    send({ method: "thread/started", params: { thread } });
++    return;
++  }
++  if (message.method === "turn/start") {
++    const threadId = message.params.threadId;
++    const state = threads.get(threadId);
++    if (!state) {
++      respondError(message.id, -32004, "thread not found");
++      return;
++    }
++    turnCounter += 1;
++    const turnId = `turn-${turnCounter}`;
++    state.turns.push(turnId);
++    const turn = { id: turnId, status: "inProgress", items: [], error: null };
++    respond(message.id, { turn });
++    send({ method: "turn/started", params: { threadId, turn } });
++
++    if (process.env.MOCK_SERVER_REQUEST === "1") {
++      send({ id: 9000 + turnCounter, method: "item/commandExecution/requestApproval", params: { threadId, turnId } });
++      return;
++    }
++
++    const text = inputText(message.params);
++    if (state.turns.length === 1) {
++      const taskId = taskField(text, "task_id");
++      const logicalAttemptId = taskField(text, "logical_attempt_id");
++      completedItem(threadId, turnId, {
++        outcome: "INPUT_REQUIRED",
++        context_need: {
++          request_id: `need:${taskId}:required_value`,
++          task_id: taskId,
++          logical_attempt_id: logicalAttemptId,
++          expected_seq: 0,
++          missing: ["required_value"],
++          known_digests: [],
++          max_tokens: 256,
++        },
++        compact_result: null,
++        artifact_paths: [],
++        evidence: ["required_value missing"],
++      });
++      return;
++    }
++
++    const required = text.match(/"required_value"\s*:\s*"((?:\\.|[^"\\])*)"/)?.[1];
++    const requiredValue = required === undefined ? null : JSON.parse(`"${required}"`);
++    if (requiredValue === null) {
++      completedItem(threadId, turnId, {
++        outcome: "FAILED",
++        context_need: null,
++        compact_result: "delta missing required_value",
++        artifact_paths: [],
++        evidence: [],
++      });
++      return;
++    }
++    await writeFile(join(state.cwd, "result.txt"), requiredValue, "utf8");
++    completedItem(threadId, turnId, {
++      outcome: "COMPLETED",
++      context_need: null,
++      compact_result: "result.txt created from ContextPacketDelta",
++      artifact_paths: ["result.txt"],
++      evidence: ["exact bytes written"],
++    });
++    return;
++  }
++  if (message.method === "turn/interrupt") {
++    respond(message.id, {});
++    send({
++      method: "turn/completed",
++      params: {
++        threadId: message.params.threadId,
++        turn: { id: message.params.turnId, status: "interrupted", items: [], error: null },
++      },
++    });
++    return;
++  }
++  if (Object.hasOwn(message, "id")) respondError(message.id, -32601, `method not found: ${message.method}`);
++}
++
++rl.on("line", (line) => {
++  if (!line.trim()) return;
++  let message;
++  try {
++    message = JSON.parse(line);
++  } catch {
++    process.exitCode = 2;
++    return;
++  }
++  handle(message).catch((error) => {
++    if (Object.hasOwn(message, "id")) respondError(message.id, -32099, error.message);
++  });
++});
+diff --git a/packages/codex-app-server-adapter/test/live-two-turn.test.mjs b/packages/codex-app-server-adapter/test/live-two-turn.test.mjs
+new file mode 100644
+index 0000000..f3306bd
+--- /dev/null
++++ b/packages/codex-app-server-adapter/test/live-two-turn.test.mjs
+@@ -0,0 +1,10 @@
++import test from "node:test";
++import { runLiveTwoTurnCertification } from "../src/certify.js";
++
++const enabled = process.env.AKASHIC_CODEX_LIVE_TEST === "1";
++
++test("official Codex App Server live two-turn certification", { skip: !enabled, timeout: 45 * 60_000 }, async () => {
++  await runLiveTwoTurnCertification({
++    runs: Number(process.env.AKASHIC_CODEX_LIVE_RUNS ?? 3),
++  });
++});
+diff --git a/packages/codex-app-server-adapter/test/protocol.test.mjs b/packages/codex-app-server-adapter/test/protocol.test.mjs
+new file mode 100644
+index 0000000..87154d5
+--- /dev/null
++++ b/packages/codex-app-server-adapter/test/protocol.test.mjs
+@@ -0,0 +1,54 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import { fileURLToPath } from "node:url";
++import { CodexAppServerAdapter } from "../src/client.js";
++import { CodexAppServerProcess } from "../src/process-manager.js";
++
++const mockServer = fileURLToPath(new URL("./fixtures/mock-app-server.mjs", import.meta.url));
++
++function adapter(env = {}) {
++  return new CodexAppServerAdapter({
++    processManager: new CodexAppServerProcess({
++      command: process.execPath,
++      args: [mockServer],
++      env,
++    }),
++    turnTimeoutMs: 5_000,
++  });
++}
++
++test("initialize precedes initialized and model/list without experimental opt-in", async () => {
++  const client = adapter();
++  try {
++    await client.start();
++    const outbound = client.transport.trace.filter((entry) => entry.direction === "outbound");
++    assert.equal(outbound[0].message.method, "initialize");
++    assert.equal(outbound[0].message.params.capabilities.experimentalApi, false);
++    assert.equal(outbound[1].message.method, "initialized");
++    assert.equal(outbound[2].message.method, "model/list");
++    assert.equal(client.models.length, 1);
++  } finally {
++    await client.stop();
++  }
++});
++
++test("model/list overload is retried and selection validates effort and tier", async () => {
++  const client = adapter({ MOCK_OVERLOAD_MODEL_LIST: "1" });
++  try {
++    await client.start();
++    const selection = client.selectModel({ requestedEffort: "high", requestedServiceTier: "standard" });
++    assert.equal(selection.model, "mock-model");
++    assert.equal(selection.effort, "high");
++    assert.equal(selection.service_tier, "standard");
++    const modelListRequests = client.transport.trace.filter(
++      (entry) => entry.direction === "outbound" && entry.message?.method === "model/list",
++    );
++    assert.equal(modelListRequests.length, 2);
++    assert.throws(
++      () => client.selectModel({ requestedEffort: "ultra" }),
++      (error) => error.code === "EFFORT_UNAVAILABLE",
++    );
++  } finally {
++    await client.stop();
++  }
++});
+diff --git a/packages/codex-app-server-adapter/test/two-turn.fixture.test.mjs b/packages/codex-app-server-adapter/test/two-turn.fixture.test.mjs
+new file mode 100644
+index 0000000..94f57fa
+--- /dev/null
++++ b/packages/codex-app-server-adapter/test/two-turn.fixture.test.mjs
+@@ -0,0 +1,78 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import { mkdtemp, readFile, rm } from "node:fs/promises";
