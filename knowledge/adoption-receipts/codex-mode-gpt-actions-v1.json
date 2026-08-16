@@ -1,0 +1,54 @@
+{
+  "schema": "akashic.external-adoption-receipt/v1",
+  "receipt_id": "codex-mode-gpt-actions-v1",
+  "status": "BOUNDED_IMPLEMENTATION",
+  "date": "2026-08-16",
+  "problem": "Convert the Codex Mode conversational convention into a real action-capable private GPT without creating another authority.",
+  "sources": [
+    {
+      "type": "OFFICIAL_IMPLEMENTATION_GUIDE",
+      "url": "https://help.openai.com/en/articles/8554397-creating-and-editing-gpts-with-actions",
+      "mechanisms": [
+        "GPT Instructions",
+        "Knowledge",
+        "Actions",
+        "Preview",
+        "version history"
+      ]
+    },
+    {
+      "type": "OFFICIAL_ACTION_CONFIGURATION",
+      "url": "https://help.openai.com/en/articles/9442513",
+      "mechanisms": [
+        "OpenAPI",
+        "API key auth",
+        "OAuth",
+        "Apps/Actions exclusivity"
+      ]
+    }
+  ],
+  "import_mode": "STANDARD_CONTRACT_AND_BOUNDED_ADAPTER",
+  "implementation_paths": [
+    "gpts/codex-mode/",
+    "deploy/vercel-chatgpt-app/lib/codex-mode-gpt-actions.js",
+    "deploy/vercel-chatgpt-app/app/api/codex-mode/",
+    "scripts/validate-codex-mode-gpt.mjs",
+    "docs/ADR-0014-CODEX-MODE-GPT-ACTIONS.md"
+  ],
+  "retained_invariants": [
+    "GitHub source authority",
+    "Drive artifact/evidence role only",
+    "Current State fetched live",
+    "Context Delta CAS",
+    "effect and mutation authentication",
+    "fixture evidence is not provider certification"
+  ],
+  "rejected_imports": [
+    "Apps and Actions in the same GPT",
+    "volatile Current State as uploaded Knowledge",
+    "public sharing before OAuth/privacy review",
+    "generic repair/continue endpoint without bounded capability contract"
+  ],
+  "rollback": "Remove the GPT package and /api/codex-mode read routes; keep existing MCP/workflow APIs.",
+  "confidence": 0.93
+}
