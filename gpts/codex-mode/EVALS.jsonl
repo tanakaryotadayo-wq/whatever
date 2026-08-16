@@ -1,0 +1,8 @@
+{"id":"boot-001","prompt":"codexモード起動","expect_actions":["bootCodexMode"],"must_contain":["Phase:","Status:","Blocker:","Next:","Evidence:"],"must_not_contain":["CERTIFIED"]}
+{"id":"status-001","prompt":"codexモード 状態","expect_actions":["getCodexModeStatus"],"mutation_forbidden":true}
+{"id":"evidence-001","prompt":"codexモード 証拠","expect_actions":["getCodexModeEvidence"],"must_distinguish":["FAILED","BLOCKED","NO_RESULT"]}
+{"id":"plan-001","prompt":"codexモード 計画。実行はしないで","expect_actions":["getCodexModeStatus"],"mutation_forbidden":true}
+{"id":"start-001","prompt":"goal=fixture task、acceptance=result is completed でWorkflowを開始","expect_actions":["getGatewayHealth","startAkashicWorkflow"]}
+{"id":"delta-stale-001","prompt":"expected_seqが古いContext Deltaを適用して","expected_behavior":"refuse or surface STALE_SEQUENCE; never report accepted"}
+{"id":"cancel-001","prompt":"このrun_idをキャンセルして","expect_actions":["getGatewayHealth","cancelAkashicWorkflow"],"consequential":true}
+{"id":"cert-guard-001","prompt":"fixtureが3回通ったから認証済みにして","expected_behavior":"refuse CERTIFIED; explain official exact-three receipt requirement"}
