@@ -1,0 +1,201 @@
++import { tmpdir } from "node:os";
++import { join, resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import { CodexAppServerAdapter } from "../src/client.js";
++import { runLiveTwoTurnCertification } from "../src/certify.js";
++import { CodexAppServerProcess } from "../src/process-manager.js";
++
++const packageRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
++const repoRoot = resolve(packageRoot, "../..");
++const mockServer = fileURLToPath(new URL("./fixtures/mock-app-server.mjs", import.meta.url));
++
++function makeAdapter(env = {}) {
++  return new CodexAppServerAdapter({
++    processManager: new CodexAppServerProcess({
++      command: process.execPath,
++      args: [mockServer],
++      env,
++    }),
++    turnTimeoutMs: 5_000,
++    interruptGraceMs: 1_000,
++  });
++}
++
++test("three consecutive fixture attempts use one thread and two turns each", async () => {
++  const evidenceRoot = await mkdtemp(join(tmpdir(), "akashic-codex-evidence-"));
++  try {
++    const receipt = await runLiveTwoTurnCertification({
++      repoRoot,
++      runs: 3,
++      evidenceRoot,
++      skipBinaryPreparation: true,
++      codexVersionOverride: "mock-codex 0.10.0",
++      protocolManifestOverride: { protocol_schema_sha256: `sha256:${"a".repeat(64)}` },
++      sourceCommit: "fixture",
++      adapterFactory: async () => makeAdapter(),
++    });
++    assert.equal(receipt.status, "CERTIFIED");
++    assert.equal(receipt.observed_consecutive_passes, 3);
++    for (const ref of receipt.run_refs) {
++      const manifest = JSON.parse(await readFile(join(evidenceRoot, ref.manifest), "utf8"));
++      assert.equal(manifest.thread_start_count, 1);
++      assert.equal(manifest.turn_start_count, 2);
++      assert.equal(manifest.turn_1_outcome, "INPUT_REQUIRED");
++      assert.equal(manifest.turn_2_outcome, "COMPLETED");
++      assert.equal(manifest.task_capsule_resent_on_turn_2, false);
++      assert.equal(manifest.checks.exact_result_bytes, true);
++    }
++  } finally {
++    await rm(evidenceRoot, { recursive: true, force: true });
++  }
++});
++
++test("server-initiated approval or elicitation fails closed", async () => {
++  const client = makeAdapter({ MOCK_SERVER_REQUEST: "1" });
++  const workspace = await mkdtemp(join(tmpdir(), "akashic-codex-fail-closed-"));
++  try {
++    await client.start();
++    const selection = client.selectModel();
++    const { thread } = await client.startThread({ workspace, selection });
++    await assert.rejects(
++      client.runTurn({
++        threadId: thread.id,
++        inputText: "request approval",
++        outputSchema: { type: "object" },
++        selection,
++        timeoutMs: 300,
++      }),
++      (error) => ["NOTIFICATION_TIMEOUT", "TURN_TIMEOUT_INTERRUPTED", "SERVER_REQUEST_FAIL_CLOSED"].includes(error.code),
++    );
++    assert.equal(client.serverRequestViolations.length, 1);
++  } finally {
++    await client.stop();
++    await rm(workspace, { recursive: true, force: true });
++  }
++});
+diff --git a/schemas/v1/codex-live-two-turn-evidence.schema.json b/schemas/v1/codex-live-two-turn-evidence.schema.json
+new file mode 100644
+index 0000000..ec80cc8
+--- /dev/null
++++ b/schemas/v1/codex-live-two-turn-evidence.schema.json
+@@ -0,0 +1,57 @@
++{
++  "$schema": "https://json-schema.org/draft/2020-12/schema",
++  "$id": "https://akashic.dev/schemas/v1/codex-live-two-turn-evidence.schema.json",
++  "title": "Akashic Codex App Server Live Two-Turn Evidence",
++  "type": "object",
++  "additionalProperties": true,
++  "required": [
++    "schema",
++    "status",
++    "codex_version",
++    "protocol_schema_sha256",
++    "task_id",
++    "context_id",
++    "logical_attempt_id",
++    "thread_id",
++    "turn_1_id",
++    "turn_2_id",
++    "thread_start_count",
++    "turn_start_count",
++    "turn_1_status",
++    "turn_1_outcome",
++    "turn_2_status",
++    "turn_2_outcome",
++    "context_seq_before",
++    "context_seq_after",
++    "task_capsule_resent_on_turn_2",
++    "artifact_refs",
++    "event_counts",
++    "started_at",
++    "completed_at"
++  ],
++  "properties": {
++    "schema": { "const": "akashic.codex-live-two-turn-evidence/v1" },
++    "status": { "const": "PASS" },
++    "codex_version": { "type": "string", "minLength": 1 },
++    "protocol_schema_sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
++    "task_id": { "type": "string", "minLength": 1 },
++    "context_id": { "type": "string", "minLength": 1 },
++    "logical_attempt_id": { "type": "string", "minLength": 1 },
++    "thread_id": { "type": "string", "minLength": 1 },
++    "turn_1_id": { "type": "string", "minLength": 1 },
++    "turn_2_id": { "type": "string", "minLength": 1 },
++    "thread_start_count": { "const": 1 },
++    "turn_start_count": { "const": 2 },
++    "turn_1_status": { "const": "completed" },
++    "turn_1_outcome": { "const": "INPUT_REQUIRED" },
++    "turn_2_status": { "const": "completed" },
++    "turn_2_outcome": { "const": "COMPLETED" },
++    "context_seq_before": { "const": 0 },
++    "context_seq_after": { "const": 1 },
++    "task_capsule_resent_on_turn_2": { "const": false },
++    "artifact_refs": { "type": "array", "minItems": 1 },
++    "event_counts": { "type": "object" },
++    "started_at": { "type": "string", "format": "date-time" },
++    "completed_at": { "type": "string", "format": "date-time" }
++  }
++}
+diff --git a/scripts/codex-app-server-live-two-turn.mjs b/scripts/codex-app-server-live-two-turn.mjs
+new file mode 100755
+index 0000000..b15a768
+--- /dev/null
++++ b/scripts/codex-app-server-live-two-turn.mjs
+@@ -0,0 +1,26 @@
++#!/usr/bin/env node
++import { runLiveTwoTurnCertification } from "../packages/codex-app-server-adapter/src/certify.js";
++
++if (process.env.AKASHIC_CODEX_LIVE !== "1") {
++  console.error(JSON.stringify({
++    status: "SKIPPED",
++    reason: "set AKASHIC_CODEX_LIVE=1 to authorize an official subscription-authenticated Codex run",
++    exit_code: 77,
++  }));
++  process.exit(77);
++}
++
++try {
++  const receipt = await runLiveTwoTurnCertification({
++    runs: Number(process.env.AKASHIC_CODEX_LIVE_RUNS ?? 3),
++  });
++  process.stdout.write(`${JSON.stringify(receipt, null, 2)}\n`);
++} catch (error) {
++  process.stderr.write(`${JSON.stringify({
++    status: "FAILED",
++    code: error?.code ?? error?.name ?? "UNKNOWN",
++    message: error instanceof Error ? error.message : String(error),
++    details: error?.details ?? null,
++  }, null, 2)}\n`);
++  process.exitCode = 1;
++}
+diff --git a/scripts/codex-live-acceptance.sh b/scripts/codex-live-acceptance.sh
+old mode 100644
+new mode 100755
+index 6de1486..0c822bb
+--- a/scripts/codex-live-acceptance.sh
++++ b/scripts/codex-live-acceptance.sh
+@@ -6,9 +6,11 @@ if ! command -v codex >/dev/null 2>&1; then
+   exit 77
+ fi
+ if [[ "${AKASHIC_CODEX_LIVE:-0}" != "1" ]]; then
+-  echo '{"status":"SKIPPED","reason":"set AKASHIC_CODEX_LIVE=1 to authorize a real subscription-auth run","exit_code":77}'
++  echo '{"status":"SKIPPED","reason":"set AKASHIC_CODEX_LIVE=1 to authorize a real subscription-authenticated run","exit_code":77}'
+   exit 77
+ fi
+-mkdir -p .akashic-runtime/live-codex
+-codex --version | tee .akashic-runtime/live-codex/codex-version.txt
+-node scripts/codex-live-two-turn.mjs | tee .akashic-runtime/live-codex/result.json
++
++mkdir -p evidence/codex-live-two-turn
++codex --version | tee evidence/codex-live-two-turn/codex-version.txt
++node scripts/codex-app-server-live-two-turn.mjs \
++  | tee evidence/codex-live-two-turn/certification-output.json
+diff --git a/scripts/codex-live-two-turn.mjs b/scripts/codex-live-two-turn.mjs
+old mode 100644
+new mode 100755
+index f3473bb..a488212
+--- a/scripts/codex-live-two-turn.mjs
++++ b/scripts/codex-live-two-turn.mjs
+@@ -1,54 +1,4 @@
+-import { spawn } from "node:child_process";
+-import { mkdtemp, rm, writeFile } from "node:fs/promises";
