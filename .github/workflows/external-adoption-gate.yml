@@ -1,0 +1,39 @@
+name: External adoption gate
+
+on:
+  pull_request:
+    paths:
+      - 'knowledge/**'
+      - '.agents/skills/**'
+      - 'packages/**'
+      - 'workflows/**'
+      - 'experiments/**'
+      - 'scripts/validate-external-adoption-policy.mjs'
+      - '.github/workflows/external-adoption-gate.yml'
+  push:
+    branches:
+      - 'akashic/v0.8-knowledge-packet-import'
+    paths:
+      - 'knowledge/**'
+      - '.agents/skills/**'
+      - 'packages/**'
+      - 'workflows/**'
+      - 'experiments/**'
+      - 'scripts/validate-external-adoption-policy.mjs'
+      - '.github/workflows/external-adoption-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-adoptions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Validate source priority, provenance, conformance and rollback receipts
+        run: node scripts/validate-external-adoption-policy.mjs
