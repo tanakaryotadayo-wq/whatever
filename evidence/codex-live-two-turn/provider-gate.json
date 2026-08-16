@@ -1,0 +1,11 @@
+{
+  "schema": "akashic.provider-gate-status/v1",
+  "provider": "official-codex-app-server",
+  "status": "QUEUED",
+  "hosted_contract": "PASS",
+  "workflow_run_id": 31926377835,
+  "job_id": 95114564975,
+  "runner_labels": ["self-hosted", "macOS", "akashic-codex"],
+  "live_pass_claimed": false,
+  "updated_at": "2026-08-16T04:20:00Z"
+}
