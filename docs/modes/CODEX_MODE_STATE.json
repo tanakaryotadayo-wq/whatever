@@ -3,7 +3,7 @@
   "mode_id": "codex-mode",
   "mode_version": "1.1.0",
   "activation_phrase": "codexモード起動",
-  "observed_at": "2026-08-16T05:20:00Z",
+  "observed_at": "2026-08-16T05:34:00Z",
   "freshness_ttl_seconds": 900,
   "phase": "OFFICIAL_PROVIDER_CERTIFICATION",
   "status": "PROVIDER_ATTEMPTED_FAILED_AND_BLOCKED",
@@ -37,18 +37,20 @@
     "spec_file_id": "1De-Ua7UQXrl6OFYlYf2s42ENp3lVE1kl",
     "retained_in_progress_folder_id": "1IptDk7ePL2wUWXcLAVal8YtwiwCZgLew",
     "retained_manifest_title": "MANIFEST_akashic_codex_app_server_p0_in_progress_20260816.json",
+    "quarantine_folder_id": "1T18SSIWsrJPBH6Grv9i2wug-W4N25MXy",
+    "quarantine_folder_url": "https://drive.google.com/drive/folders/1T18SSIWsrJPBH6Grv9i2wug-W4N25MXy",
     "misclassified_records": [
       {
         "file_id": "1O86kL6nNjT3gjACfEnNERyd11pihRzIg",
         "original_name": "v0.10.0_codex_app_server_live_final_evidence.zip",
         "actual_status": "NO_RESULT",
-        "action": "MOVE_OUT_OF_RELEASES_AND_RENAME"
+        "action": "QUARANTINED_OUTSIDE_RELEASES"
       },
       {
         "file_id": "1T18SSIWsrJPBH6Grv9i2wug-W4N25MXy",
         "original_name": "v0.10.0-codex-app-server-live",
         "actual_status": "EMPTY_NO_RESULT_CONTAINER",
-        "action": "MOVE_OUT_OF_RELEASES_AND_RENAME"
+        "action": "QUARANTINED_OUTSIDE_RELEASES"
       }
     ]
   },
