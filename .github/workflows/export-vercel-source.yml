@@ -1,4 +1,4 @@
-name: Export canonical Vercel Gateway source
+name: Export canonical deployment and GPT bundles
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-      - name: Assemble standalone deployment bundle
+      - name: Assemble standalone Vercel deployment bundle
         shell: bash
         run: |
           rm -rf /tmp/akashic-vercel-bundle
@@ -46,10 +46,59 @@ jobs:
             "authority": "GitHub main remains source authority"
           }
           JSON
+      - name: Assemble Codex Mode GPT Drive mirror bundle
+        shell: bash
+        run: |
+          rm -rf /tmp/akashic-codex-mode-gpt-drive
+          mkdir -p /tmp/akashic-codex-mode-gpt-drive/gpt-package
+          cp docs/modes/CODEX_MODE_POINTER.md /tmp/akashic-codex-mode-gpt-drive/
+          cp docs/modes/CODEX_MODE_STATE.json /tmp/akashic-codex-mode-gpt-drive/
+          cp docs/modes/CODEX_MODE.md /tmp/akashic-codex-mode-gpt-drive/
+          cp docs/modes/CODEX_MODE_HANDOFF.json /tmp/akashic-codex-mode-gpt-drive/
+          cp docs/modes/MANIFEST_CODEX_MODE_20260816.json /tmp/akashic-codex-mode-gpt-drive/
+          cp -a gpts/akashic-codex-mode/. /tmp/akashic-codex-mode-gpt-drive/gpt-package/
+          printf '%s\n' "27d07542ee6ed26f1d44d216c7316cd896d3d13c" > /tmp/akashic-codex-mode-gpt-drive/SOURCE_COMMIT
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const path = require('node:path');
+          const root = '/tmp/akashic-codex-mode-gpt-drive';
+          const records = [];
+          function walk(dir) {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) walk(full);
+              else if (entry.name !== 'DRIVE_MIRROR_MANIFEST.json') {
+                const bytes = fs.readFileSync(full);
+                records.push({
+                  path: path.relative(root, full),
+                  bytes: bytes.length,
+                  sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
+                });
+              }
+            }
+          }
+          walk(root);
+          records.sort((a, b) => a.path.localeCompare(b.path));
+          fs.writeFileSync(path.join(root, 'DRIVE_MIRROR_MANIFEST.json'), JSON.stringify({
+            schema: 'akashic.codex-mode-gpt-drive-mirror/v1',
+            source_repository: 'tanakaryotadayo-wq/whatever',
+            source_commit: '27d07542ee6ed26f1d44d216c7316cd896d3d13c',
+            status: 'PACKAGE_READY_ACTION_DEPLOYMENT_PENDING',
+            files: records,
+          }, null, 2) + '\n');
+          NODE
       - uses: actions/upload-artifact@v4
         with:
           name: akashic-vercel-gateway-standalone-${{ github.sha }}
           path: /tmp/akashic-vercel-bundle
+          include-hidden-files: true
+          if-no-files-found: error
+          compression-level: 9
+      - uses: actions/upload-artifact@v4
+        with:
+          name: akashic-codex-mode-gpt-drive-${{ github.sha }}
+          path: /tmp/akashic-codex-mode-gpt-drive
           include-hidden-files: true
           if-no-files-found: error
           compression-level: 9
