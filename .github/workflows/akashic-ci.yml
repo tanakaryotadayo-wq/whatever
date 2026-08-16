@@ -15,6 +15,7 @@ on:
       - 'scripts/**'
       - 'schemas/**'
       - 'docs/**'
+      - 'evidence/**'
       - 'runtime/**'
       - 'recovery/**'
       - 'package*.json'
@@ -69,10 +70,13 @@ jobs:
           AKASHIC_CI_RUN_ATTEMPT: ${{ github.run_attempt }}
           AKASHIC_CI_REF: ${{ github.ref }}
         run: node scripts/write-ci-evidence.mjs
-      - name: Upload CI evidence
+      - name: Upload CI and live-provider evidence
         uses: actions/upload-artifact@v4
         with:
           name: akashic-ci-evidence-${{ github.sha }}
-          path: evidence/ci/
+          path: |
+            evidence/ci/
+            evidence/vercel-live-p0-20260816.json
+            docs/releases/V0_9_0_VERCEL_LIVE_P0.md
           if-no-files-found: error
           retention-days: 30
