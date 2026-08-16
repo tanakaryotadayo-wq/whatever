@@ -1,28 +1,65 @@
-name: Official Codex live acceptance
+name: Official Codex App Server live certification
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - akashic/v0.10-codex-app-server-live
+    paths:
+      - 'package.json'
+      - 'packages/codex-app-server-adapter/**'
+      - 'fixtures/codex-live-two-turn/**'
+      - 'scripts/codex-app-server-live-two-turn.mjs'
+      - 'scripts/codex-live-acceptance.sh'
+      - 'scripts/codex-live-two-turn.mjs'
+      - 'docs/ADR-CODEX-APP-SERVER-LIVE-TWO-TURN.md'
+      - '.github/workflows/codex-live-acceptance.yml'
 
 permissions:
   contents: read
 
+concurrency:
+  group: codex-app-server-live-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  codex-two-turn:
-    if: ${{ vars.CODEX_LIVE_RUNNER_ENABLED == 'true' }}
-    runs-on: [self-hosted, macOS, akashic-codex]
-    timeout-minutes: 30
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
-      - run: npm install
-      - name: Real subscription-auth Codex two-turn
+          cache: npm
+      - run: npm ci
+      - name: App Server adapter fixture contract
+        run: node --test packages/codex-app-server-adapter/test/*.test.mjs
+
+  codex-two-turn:
+    needs: contract
+    if: ${{ vars.CODEX_LIVE_RUNNER_ENABLED == 'true' }}
+    runs-on: [self-hosted, macOS, akashic-codex]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Official subscription-auth Codex App Server three-run certification
         env:
           AKASHIC_CODEX_LIVE: '1'
+          CODEX_LIVE_RUNS: '3'
+          CODEX_TURN_TIMEOUT_MS: '300000'
         run: npm run test:codex-live
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: codex-live-evidence
-          path: .akashic-runtime/live-codex
+          name: codex-app-server-live-evidence-${{ github.sha }}
+          path: |
+            evidence/codex-live-two-turn
+            packages/codex-app-server-adapter/generated
+          if-no-files-found: error
+          retention-days: 30
