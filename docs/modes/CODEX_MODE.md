@@ -1,8 +1,9 @@
 ---
-schema: akashic.codex-mode/v1
+schema: akashic.codex-mode/v1.1
 mode_id: codex-mode
+mode_version: 1.1.0
 activation_phrase: "codexモード起動"
-status: ACTIVE_BOOTSTRAP_SPEC
+status_source: docs/modes/CODEX_MODE_STATE.json
 source_authority: GitHub
 artifact_evidence_authority: Google Drive
 github_repository: tanakaryotadayo-wq/whatever
@@ -10,318 +11,241 @@ github_canonical_path: docs/modes/CODEX_MODE.md
 drive_root_id: 1xrqptlQ_Ca6NQyYEFSrL9r9Skn81l05Y
 drive_pointer_title: "00 - CODEX_MODE_POINTER.md"
 drive_fallback_spec_title: "CODEX_MODE.md"
-current_provider_gate: official-codex-app-server-live-two-turn
 updated_at: 2026-08-16
 ---
 
-# Codexモード — Akashic Codex App Server運用仕様
+# Codexモード v1.1 — Akashic Codex実行モード
 
-## 0. 起動合図
+## 0. 一文定義
 
-ユーザーが次の完全一致フレーズを送ったら、このモードを起動する。
+`codexモード起動`は、過去会話を思い出す合図ではない。
 
-```text
-codexモード起動
-```
+> GitHubのMode Spec、machine-readable Current State、Google DriveのEvidenceを段階的に読み、現在実行可能な最小ゲートを選び、検証・保存まで閉じる決定論的bootstrapである。
 
-起動時に、過去会話の要約だけで作業を開始してはならない。下記の「読み込み順序」に従い、Google DriveとGitHubの正本を実際に読み込む。
+メモリは入口の索引にのみ使う。現在地・成功・失敗・commit・Evidenceは毎回Authorityから再取得する。
 
-## 1. このモードの目的
+## 1. 起動コマンド
 
-Codexモードは、AkashicのCodex実行境界を扱う専用運用モードである。
+| コマンド | 動作 | Mutation |
+|---|---|---|
+| `codexモード起動` | 状態を同期し、次の実行可能ゲートを選ぶ | 必要時のみ |
+| `codexモード 状態` | PointerとStateだけを読み、5行Status Cardを返す | なし |
+| `codexモード 続行` | 前回のActive/Blocked workstreamを再同期して実行する | あり |
+| `codexモード 診断` | GitHub・Drive・PR・Evidenceの整合性監査を行う | 修復前はなし |
+| `codexモード 証拠` | Attempt LedgerとEvidenceリンクを表示する | なし |
+| `codexモード 計画` | 実装せず、依存・DoD・リスク・実行順を更新する | なし |
+| `codexモード 終了` | Current StateとHandoffを更新して閉じる | 保存のみ |
 
-主目的は次の経路を、公式Codex App Serverと証拠付きで閉じること。
+自然言語の別名として、`Codexモードを起動`、`Codexモードの状態`、`Codexモードを続けて`も同じIntentへ正規化してよい。曖昧な場合は安全側の`状態`として扱う。
 
-```text
-Task Capsule
-  ↓
-official codex app-server
-  ↓
-turn 1
-  ↓
-INPUT_REQUIRED / ContextNeed
-  ↓
-ContextPacketDeltaのみ追加
-  ↓
-同一thread上のturn 2
-  ↓
-COMPLETED
-  ↓
-Artifact / Evidence / Certification Receipt
-```
+## 2. Progressive Disclosure
 
-新しいAgent framework、TaskStore、Workflow engineを増やすモードではない。既存のAkashic契約へ公式Codex App Serverを接続し、未証明部分を順番に閉じる。
-
-## 2. 正本と読み込み順序
-
-### 2.1 起動時の必須読み込み
-
-1. Google Driveで完全一致タイトルを検索する。
+毎回すべてを読まない。ロードを4層に分離する。
 
 ```text
-00 - CODEX_MODE_POINTER.md
+L0 Pointer
+  00 - CODEX_MODE_POINTER.md
+  ↓
+L1 Current State
+  docs/modes/CODEX_MODE_STATE.json
+  ↓
+L2 Operating Spec
+  docs/modes/CODEX_MODE.md
+  ↓
+L3 Evidence on demand
+  Manifest / Attempt / trace / ZIP / patch
 ```
 
-2. Pointer内のGitHub repository/pathを読み取る。
-3. GitHubのdefault branchから次を読む。
+### コマンド別ロード
 
-```text
-tanakaryotadayo-wq/whatever
-docs/modes/CODEX_MODE.md
-```
+- `状態`: L0 + L1
+- `起動`: L0 + L1。Stateがstale、矛盾、または作業実行が必要な場合のみL2
+- `続行`: L0 + L1 + L2。選択されたworkstreamに関係するL3だけ読む
+- `診断`: L0〜L3をAuthority横断で読む
+- `証拠`: L0 + L1 +該当Attempt/Evidence
+- `計画`: L0 + L1 + L2。Mutation toolは使わない
+- `終了`: L1を更新し、Handoff/Evidenceを書いてから閉じる
 
-4. Google DriveのPointerに記載された最新Artifact folderとManifestを読む。
-5. 必要なときだけ、ZIP/Patch/Evidenceを取得する。
-6. 読み込み完了後、現在地を3行以内で復唱してから作業へ入る。
+大きなZIPや全Protocol traceを起動時に読み込まない。Manifestとdigestを先に読み、必要な一部だけmaterializeする。
 
-### 2.2 Fallback
-
-GitHubが利用できない場合は、Google Drive内の完全一致タイトル、
-
-```text
-CODEX_MODE.md
-```
-
-を読む。
-
-Driveが利用できずGitHubが利用できる場合は、GitHubの正本だけで開始し、Drive Evidenceは未確認と明示する。
-
-両方が利用できない場合のみ、ユーザーへ接続状況を報告する。過去会話の曖昧な記憶から成功状態を推測しない。
-
-## 3. Authority split
+## 3. Authority Split
 
 ```text
 GitHub
-= モード仕様、ソース、契約、テスト、履歴、CIの正本
+= Mode Spec / State Schema / Source / Tests / CI / ADR / history
 
 Google Drive
-= Artifact、Evidence、Manifest、Handoff、正本の読み取り用ミラー
+= Pointer mirror / Artifact / Evidence / Manifest / Handoff
 
 Codex App Server
-= 公式Codex provider runtime
+= official Codex provider runtime
 
-Temporal / Vercel Workflow
-= Durable orchestration候補
-  ※ Codex provider certificationとは別レイヤー
+Temporal / Vercel Workflow / Cloudflare Workflows
+= replaceable durable orchestration candidates
 
 Akashic
-= Context、Routing、Policy、Effect identity、
-  Verification、Artifact adoptionの意味論
+= Context / Routing / Policy / Effect identity /
+  Verification / Artifact adoption semantics
 ```
 
-メモリは索引としては使えるが、Authorityではない。モードの事実は必ずGitHub/Driveから再取得する。
+Stateのmachine-readable正本はGitHub。DriveのStateはcross-session bootstrap用mirror。Driveにある名前だけで`RELEASED`や`CERTIFIED`を判断しない。
 
-## 4. 現在できること
+## 4. 起動ライフサイクル
 
-### 4.1 実装済みAdapter機能
+### `on_activate`
 
-現在の成果物には、次のCodex App Server Adapter実装が含まれる。
+1. Driveで`00 - CODEX_MODE_POINTER.md`を完全一致検索する。
+2. GitHub default branchの`docs/modes/CODEX_MODE_STATE.json`を読む。
+3. GitHub main、Provider branch、PRの現在head/stateを再取得する。
+4. Drive current Evidence folder、Manifest、誤分類レコードを確認する。
+5. `observed_at`と現在値を比較し、差分があれば`STALE`としてreconcileする。
+6. 接続済みtool/capabilityを確認する。
+7. Status Cardを返す。
 
-- newline-delimited JSON / stdio transport
-- 長寿命`codex app-server`子プロセス管理
-- `initialize → initialized` handshake
-- `model/list`による利用可能model・reasoning effort選択
-- `thread/start`を1回だけ実行
-- 同一threadに`turn/start`を複数回追加
-- `turn/started` / item events / `turn/completed`の収集
-- `turn/completed`を完了判定の正本として使用
-- timeout時の`turn/interrupt`
-- App Server死亡時のfail-closed
-- approval / elicitation要求のfail-closed
-- `outputSchema`による構造化出力
-- turn 1の`INPUT_REQUIRED / ContextNeed`
-- turn 2へTask Capsule全文を再送せず、ContextPacketDeltaのみ送信
-- protocol traceのsanitization
-- Artifact bytes / SHA-256 / size検証
-- Evidence manifest / certification receipt生成
-- 同一fixtureで3回連続認証するrunner
-- 既存Temporal P0、Vercel build、Cloudflare conformanceへの回帰検査
+### `pre_mutation`
 
-### 4.2 今のモードで実行できる作業
+- PLAN modeではmutationを禁止する。
+- Source Authority、対象branch、expected headを確認する。
+- Credentialやrunnerがないprovider gateは実行済みと偽装しない。
+- External mutationはpolicy/confirmation/effect identityを確認する。
+- 二つ目のTask Authorityを作らない。
 
-Codexモード起動後のAssistantは、接続されているツール範囲で次を行う。
+### `post_mutation`
 
-1. 現在のGitHub main、provider branch、Drive Evidenceを再同期する。
-2. Adapterのソース、Protocol契約、テストを監査する。
-3. 公式Codex versionに対応するschema生成手順を更新する。
-4. Local/VM runnerが利用可能ならLive Two-Turnを実行する。
-5. 実行結果をsanitized Evidenceへ変換する。
-6. 3回連続PASSを同一Codex versionで確認する。
-7. 成功時のみcertification receiptを作る。
-8. GitHubへコード・ADR・テストを反映する。
-9. DriveへManifest、Evidence、handoff bundleを保存する。
-10. 未完了時は、失敗点と再開点をmachine-readableに残す。
+- 最小conformance testを実行する。
+- 既存Canonical regressionを実行する。
+- source commit、test result、artifact digestをEvidenceへ記録する。
+- Current StateとPointerの参照先を更新する。
 
-### 4.3 現在できないと断定すべきこと
+### `on_failure`
 
-以下は、証拠がない限り成功扱いしない。
+- `FAILED`、`BLOCKED`、`NO_RESULT`を区別する。
+- 失敗Attemptを上書きせずappend-only ledgerへ追加する。
+- 「final」「release」「certified」という名前へ保存しない。
+- 次の再開点と、同じ入力で繰り返してはいけない経路を記録する。
 
-- 公式Codex binaryで3回連続Live PASS
-- App Server process restart後の`thread/resume`
-- Temporal Activity / Vercel Workflowからの本番Codex接続
-- credentialed Drive REST adapterの完全認証
-- authenticated ChatGPT → Vercel mutation path
-- Workflow Authorityの最終選定
+### `on_stop`
 
-## 5. 現在の正確な状態
+- DoD validatorを実行する。
+- official binary同一versionの3連続PASS receiptがなければ`CERTIFIED`を拒否する。
+- State、Handoff、Drive mirror、Project Indexを更新する。
+- Status Cardを最終出力する。
+
+## 5. UX Task Projection
+
+Codexモードの作業は、第二TaskStoreを作らず、GitHub PR/Workflow/Evidenceから次へ投影する。
 
 ```text
-Adapter implementation           PASS
-Fixture three-run certification  PASS
-Full regression suite            PASS
-Drive preservation               PASS
-Official Codex live three-run     NOT RUN
-Overall P0 certification          OPEN
+DRAFT    = 計画・PR Draft・未実行
+ACTIVE   = 実行中
+BLOCKED  = 必須capability/credential/runner不足
+READY    = 実装と検証が完了し、review/adoption待ち
+DONE     = canonical mainへ採用し、Evidence保存済み
+FAILED   = 実行して失敗証拠がある
+ARCHIVED = supersededだが監査目的で保持
 ```
 
-### 5.1 GitHub
+`READY`は`DONE`ではない。Fixture PASSはProvider Certificationの`READY`にもならない。Provider pathはvalid three-run receiptが得られるまで`BLOCKED`または`FAILED`である。
 
-Canonical repository:
+## 6. Startup Status Card
+
+起動応答は長い説明ではなく、最初に次の5項目を返す。
 
 ```text
-https://github.com/tanakaryotadayo-wq/whatever
+Codexモード v1.1
+Phase: <phase>
+Status: <status>
+Blocker: <one load-bearing blocker>
+Next: <one executable action>
+Evidence: <manifest or attempt ledger>
 ```
 
-Canonical main at the time of this record:
+詳細は求められた場合、または`診断`/`証拠`コマンド時だけ展開する。
 
-```text
-3777ec97d159dc19b855b59acd626b1f1497eb8d
-```
+## 7. 現在の能力
 
-Provider work branch:
+Canonical sourceとProvider branchには、少なくとも次の実装がある。
 
-```text
-akashic/p0-codex-app-server-live-two-turn
-```
+- JSONL / stdio transport
+- 長寿命`codex app-server` process管理
+- `initialize → initialized`
+- version-matched `generate-json-schema` / `generate-ts`
+- `model/list`
+- 1 `thread/start` + same-thread 2 `turn/start`
+- `turn/completed` authority
+- timeout時`turn/interrupt`
+- approval / inbound server request fail-closed
+- `outputSchema` constrained result
+- turn 1 `INPUT_REQUIRED`
+- turn 2 delta-only continuation
+- Task Capsule resend detection
+- exact result bytes / ArtifactRef digest/size
+- protocol sanitization / secret scan
+- Evidence manifest / certification receipt
+- fake App Server three-run tests
+- Temporal / Vercel / Drive / Cloudflare regression
 
-Observed branch head at this record:
+現在値は本書へ重複記載せず、`docs/modes/CODEX_MODE_STATE.json`から読む。
 
-```text
-806ebf3eee3ae80aa6166be153011638c854637f
-```
-
-注意: このbranchはProvider P0の作業面であり、公式Live認証済みreleaseではない。正本化処理と公式binary認証は未完了。
-
-### 5.2 Google Drive
-
-Akashic root:
-
-```text
-https://drive.google.com/drive/folders/1xrqptlQ_Ca6NQyYEFSrL9r9Skn81l05Y
-```
-
-Current Codex P0 artifact folder:
-
-```text
-https://drive.google.com/drive/folders/1IptDk7ePL2wUWXcLAVal8YtwiwCZgLew
-```
-
-必須ファイル:
-
-```text
-AKASHIC_CODEX_APP_SERVER_P0_IN_PROGRESS_20260816.md
-MANIFEST_akashic_codex_app_server_p0_in_progress_20260816.json
-akashic_codex_app_server_p0_source_in_progress_20260816.zip
-codex-app-server-p0.patch
-```
-
-Patch SHA-256:
-
-```text
-446e202dd2d4fd5b4b8582eb599b76b66ec08d48ffd29290acfe2aedcc751336
-```
-
-## 6. 起動時プロトコル
-
-ユーザーが「codexモード起動」と言ったとき、Assistantは次を実行する。
-
-```text
-A. Drive Pointerを検索・読む
-B. GitHub canonical specを読む
-C. Drive current Manifestを読む
-D. GitHub main / provider branchの現在headを確認
-E. 最新statusを以下へ分類
-   - CERTIFIED
-   - LIVE_FAILED
-   - FIXTURE_PASS_LIVE_OPEN
-   - SOURCE_BLOCKED
-   - TOOLING_UNAVAILABLE
-F. 次の最小作業を一つ選ぶ
-G. 作業を実行し、GitHub/DriveへEvidenceを戻す
-```
-
-起動応答の標準形:
-
-```text
-Codexモード起動。
-正本: <GitHub path @ commit>
-Evidence: <Drive folder / manifest>
-現在地: <status>
-次の一手: <one concrete gate>
-```
-
-ユーザーへ過去の事情を再説明させない。
-
-## 7. 実装上の不変条件
-
-1. stdio JSONLを安定境界にする。
-2. experimental WebSocketを本番境界にしない。
-3. App Serverを直接インターネット公開しない。
-4. Protocol fieldは実Codex binary生成schemaから確認する。
-5. `initialize`前に別RPCを送らない。
-6. `thread/start`は1回、turnは同一threadへ追加する。
-7. turn 2へTask Capsule全文を再送しない。
-8. approval要求を自動承認しない。
-9. fixture成功をofficial provider成功と呼ばない。
-10. 3回連続Live PASS前にCERTIFIEDと報告しない。
-11. Evidenceへcredential、authorization、cookie、tokenを保存しない。
-12. GitHubがSource Authority、DriveはArtifact/Evidence Planeである。
-
-## 8. Official Live Certification DoD
+## 8. Provider Certification Gate
 
 次をすべて満たした場合のみ`CERTIFIED`。
 
-- official Codex binaryを使用
-- binary versionを記録
-- version対応schemaを生成しdigest化
-- initialize / initialized成功
-- model/list成功
-- thread/start = 1回
-- turn/start = 2回
-- 両turnでturn/started / turn/completed観測
-- 同一thread ID
-- turn 1 = schema-valid INPUT_REQUIRED
-- ContextNeed identity/CAS一致
-- turn 2へTask Capsule再送なし
-- turn 2 = schema-valid COMPLETED
-- result.txtのbytes一致
-- ArtifactRef digest/size一致
-- sanitized trace存在
-- secret leakなし
-- 同一versionで3回連続PASS
-- 既存Canonical CI回帰なし
-- machine-readable certification receipt生成
-- Drive Evidence保存
-- GitHub ADR / status更新
+1. official Codex binary
+2. binary version記録
+3. version-matched generated schema digest
+4. `initialize / initialized`
+5. `model/list`
+6. `thread/start = 1`
+7. `turn/start = 2`
+8. 両turnで`turn/started / turn/completed`
+9. 同一thread ID
+10. turn 1 = schema-valid `INPUT_REQUIRED`
+11. ContextNeed identity/CAS一致
+12. turn 2へTask Capsule再送なし
+13. turn 2 = schema-valid `COMPLETED`
+14. result bytes一致
+15. ArtifactRef digest/size一致
+16. sanitized trace
+17. secret leakなし
+18. 同一Codex versionで3回連続PASS
+19. Canonical CI回帰なし
+20. machine-readable certification receipt
+21. Drive Evidence保存
+22. GitHub State/ADR更新
 
-## 9. Certification後の次段階
+`workflow green`、`adapter test PASS`、`receipt_found=true`だけではProvider PASSではない。
 
-Live Two-TurnがCERTIFIEDになった後だけ、次へ進む。
+## 9. 現在の真のProvider状態
+
+Current Stateが示すとおり、Providerは「未実行」ではない。
+
+- GitHub-hosted macOS: `BLOCKED` — repository-scoped `OPENAI_API_KEY`なし
+- GitHub Models single model: `FAILED`
+- GitHub Models matrix: `FAILED`
+- valid official three-run receipt: なし
+- PR #15: Draft
+- Overall certification: `OPEN`
+
+過去の`Official Codex live three-run = NOT RUN`表現はsuperseded。以後は`PROVIDER_ATTEMPTED_FAILED_AND_BLOCKED`を使う。
+
+## 10. 次段階
+
+Provider Certificationが`CERTIFIED`になった後のみ次へ進む。
 
 1. App Server restart / `thread/resume` fault certification
-2. `RunCodexTurnActivity`への接続
-3. Vercel Workflow側Agent Portへの接続
+2. `RunCodexTurnActivity`接続
+3. Vercel Workflow Agent Port接続
 4. authenticated ChatGPT MCP mutation
-5. Temporal / Vercel / Cloudflare固定fault bake-off
+5. Temporal / Vercel / Cloudflare fixed bake-off
 6. Workflow Authorityを一つに選定
 
-## 10. 更新規律
+## 11. 更新規律
 
-このファイルを更新する場合:
-
-- GitHub `docs/modes/CODEX_MODE.md`を先に更新する。
-- Drive mirrorを同内容へ更新する。
-- Drive PointerのURL/path/statusを更新する。
-- Project Indexへ最新モード状態を追記する。
-- 古い成功主張を残す場合は、最新節が優先することを明記する。
-- `updated_at`とcurrent Manifestを更新する。
+- GitHub Stateを先に更新する。
+- Specは安定契約、Stateは現在値として分離する。
+- Drive PointerとState mirrorを更新する。
+- Attemptはappend-onlyにする。
+- `FAILED/BLOCKED/NO_RESULT`を`releases/`へ置かない。
+- Project Indexでは最新監査節を過去記録より優先する。
+- Activation時に保存済みSHAを盲信せず再取得する。
