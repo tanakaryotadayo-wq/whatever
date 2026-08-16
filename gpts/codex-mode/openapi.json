@@ -1,0 +1,178 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Akashic Codex Mode Actions",
+    "version": "1.0.0",
+    "description": "Private GPT Action surface for live Codex Mode state and verified Akashic workflow operations."
+  },
+  "servers": [
+    {
+      "url": "https://akashic-vercel-canonical-p0.vercel.app"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "JsonObject": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "TaskRequest": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Akashic task capsule or backend-neutral RunAgentTask input."
+      },
+      "ContextDeltaRequest": {
+        "type": "object",
+        "required": ["context_delta"],
+        "properties": {
+          "context_delta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "getGatewayHealth",
+        "summary": "Read Akashic Gateway health and mutation readiness",
+        "x-openai-isConsequential": false,
+        "responses": {
+          "200": { "description": "Gateway health" }
+        }
+      }
+    },
+    "/api/codex-mode/boot": {
+      "get": {
+        "operationId": "bootCodexMode",
+        "summary": "Boot Codex Mode from live GitHub authority",
+        "description": "Returns live refs, current state digest, handoff, blockers and compact Status Card.",
+        "x-openai-isConsequential": false,
+        "responses": {
+          "200": { "description": "Codex Mode boot receipt" }
+        }
+      }
+    },
+    "/api/codex-mode/status": {
+      "get": {
+        "operationId": "getCodexModeStatus",
+        "summary": "Read compact live Codex Mode status",
+        "x-openai-isConsequential": false,
+        "responses": {
+          "200": { "description": "Current status" }
+        }
+      }
+    },
+    "/api/codex-mode/evidence": {
+      "get": {
+        "operationId": "getCodexModeEvidence",
+        "summary": "Read provider attempt evidence referenced by live state",
+        "x-openai-isConsequential": false,
+        "responses": {
+          "200": { "description": "Attempt ledger and evidence" }
+        }
+      }
+    },
+    "/api/workflows/tasks": {
+      "post": {
+        "operationId": "startAkashicWorkflow",
+        "summary": "Start a durable Akashic RunAgentTask workflow",
+        "x-openai-isConsequential": true,
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["task"],
+                "properties": {
+                  "task": { "$ref": "#/components/schemas/TaskRequest" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": { "description": "Workflow accepted" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Mutations disabled" }
+        }
+      }
+    },
+    "/api/workflows/tasks/{runId}": {
+      "get": {
+        "operationId": "getAkashicWorkflow",
+        "summary": "Read a compact durable workflow snapshot",
+        "x-openai-isConsequential": false,
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Workflow snapshot" }
+        }
+      }
+    },
+    "/api/workflows/tasks/{runId}/context": {
+      "post": {
+        "operationId": "applyAkashicContextDelta",
+        "summary": "Apply an exact CAS-guarded ContextPacketDelta",
+        "x-openai-isConsequential": true,
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ContextDeltaRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Delta accepted" },
+          "409": { "description": "Stale or mismatched Delta" }
+        }
+      }
+    },
+    "/api/workflows/tasks/{runId}/cancel": {
+      "post": {
+        "operationId": "cancelAkashicWorkflow",
+        "summary": "Cancel a durable workflow run",
+        "x-openai-isConsequential": true,
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Cancellation receipt" }
+        }
+      }
+    }
+  }
+}
