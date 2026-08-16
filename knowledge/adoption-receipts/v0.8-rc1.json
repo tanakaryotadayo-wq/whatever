@@ -1,0 +1,98 @@
+{
+  "schema": "akashic.external-adoption-receipt-set/v1",
+  "release_candidate": "v0.8.0-rc1",
+  "created_at": "2026-08-16T00:00:00Z",
+  "receipts": [
+    {
+      "receipt_id": "adopt-kpk-002-mcp-tasks-v1",
+      "packet_ids": ["KPK-002"],
+      "problem": "Expose Akashic tasks through a standard external semantic surface without weakening internal CAS.",
+      "sources": [
+        {
+          "class": "OFFICIAL_STANDARD",
+          "url": "https://tasks.extensions.modelcontextprotocol.io/seps/2663-tasks-extension",
+          "revision": "retrieved-2026-08-16"
+        }
+      ],
+      "import_mode": "STANDARD_CONTRACT",
+      "decision": "ADOPTED",
+      "implementation_paths": ["packages/contracts/src/mcp-tasks.js"],
+      "conformance_tests": ["packages/contracts/test/imported-packets.test.mjs"],
+      "replaced_or_avoided_custom_code": ["A separate public Akashic task protocol"],
+      "risks": ["External MCP Tasks semantics remain weaker than Akashic internal authorization and Context Delta CAS."],
+      "rollback": "Remove the projection adapter while retaining the internal TaskSnapshot contract."
+    },
+    {
+      "receipt_id": "adopt-kpk-006-effect-fencing-v1",
+      "packet_ids": ["KPK-006"],
+      "problem": "Prevent stale Activity retries or takeover workers from committing duplicate or conflicting external effects.",
+      "sources": [
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://docs.temporal.io/activity-definition",
+          "revision": "retrieved-2026-08-16"
+        },
+        {
+          "class": "COMMUNITY_PATTERN",
+          "url": "https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html",
+          "revision": "fencing-token-reference"
+        }
+      ],
+      "import_mode": "PATTERN_ONLY",
+      "decision": "ADOPTED",
+      "implementation_paths": ["packages/contracts/src/effects.js", "workflows/temporal/src/activities.js"],
+      "conformance_tests": ["packages/contracts/test/imported-packets.test.mjs", "workflows/temporal/test/temporal.integration.test.mjs"],
+      "replaced_or_avoided_custom_code": ["Exactly-once claims based only on Activity retries or a lease"],
+      "risks": ["Fencing is effective only when every commit path checks owner and generation."],
+      "rollback": "Fail closed by disabling adoption; never fall back to unfenced mutation."
+    },
+    {
+      "receipt_id": "adopt-kpk-007-oci-artifact-ref-v1",
+      "packet_ids": ["KPK-007"],
+      "problem": "Use one verifiable artifact identity across Drive, R2, GitHub, context packets and evidence.",
+      "sources": [
+        {
+          "class": "OFFICIAL_STANDARD",
+          "url": "https://github.com/opencontainers/image-spec/blob/main/descriptor.md",
+          "revision": "retrieved-2026-08-16"
+        }
+      ],
+      "import_mode": "STANDARD_CONTRACT",
+      "decision": "ADOPTED",
+      "implementation_paths": ["schemas/v1/artifact-ref.schema.json", "packages/contracts/src/index.js"],
+      "conformance_tests": ["packages/contracts/test/contracts.test.mjs"],
+      "replaced_or_avoided_custom_code": ["Provider-specific file_id/url/hash reference shapes"],
+      "risks": ["JSON canonicalization and exported Google Workspace byte identity require explicit profiles."],
+      "rollback": "Retain the previous URI as an annotation while continuing digest and size verification."
+    },
+    {
+      "receipt_id": "experiment-kpk-026-orchestrator-bakeoff-v1",
+      "packet_ids": ["KPK-026"],
+      "problem": "Select exactly one durable workflow authority from evidence rather than feature-list preference.",
+      "sources": [
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://docs.temporal.io/develop/typescript/workflows/message-passing",
+          "revision": "retrieved-2026-08-16"
+        },
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://vercel.com/docs/workflows",
+          "revision": "retrieved-2026-08-16"
+        },
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://developers.cloudflare.com/workflows/",
+          "revision": "retrieved-2026-08-16"
+        }
+      ],
+      "import_mode": "BOUNDED_EXPERIMENT",
+      "decision": "ADAPTED",
+      "implementation_paths": ["experiments/orchestrator-bakeoff"],
+      "conformance_tests": ["experiments/orchestrator-bakeoff/test/score.test.mjs"],
+      "replaced_or_avoided_custom_code": ["A second live TaskStore", "A documentation-only backend decision"],
+      "risks": ["A bake-off can sprawl unless every backend runs the same fixed contract and disqualifiers."],
+      "rollback": "Keep Temporal as the current reference implementation and remove incomplete alternative spikes."
+    }
+  ]
+}
