@@ -1,7 +1,8 @@
-# ADR-0010 — Existing-First External Adoption
+# ADR-0011 — Existing-First External Adoption
 
 **Status:** ACCEPTED  
-**Date:** 2026-08-16
+**Date:** 2026-08-16  
+**Renumbered from:** ADR-0010
 
 ## Decision
 

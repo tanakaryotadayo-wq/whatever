@@ -1,7 +1,8 @@
-# ADR-0009 — Vercel Workflow Active-Run Idempotency and Turn Advancement
+# ADR-0010 — Vercel Workflow Active-Run Idempotency and Turn Advancement
 
 Status: ACCEPTED  
-Date: 2026-08-16
+Date: 2026-08-16  
+Renumbered from: ADR-0009 (duplicate ID)
 
 ## Evidence
 

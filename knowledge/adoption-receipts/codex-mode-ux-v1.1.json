@@ -1,0 +1,78 @@
+{
+  "schema": "akashic.external-adoption-receipt-set/v1",
+  "receipts": [
+    {
+      "receipt_id": "codex-mode-ux-v1.1",
+      "packet_ids": ["KPK-001", "KPK-013", "KPK-022"],
+      "problem": "Cross-session Codex mode startup loaded stale prose, lacked lifecycle enforcement, and could misclassify provider attempts and release artifacts.",
+      "sources": [
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/create-custom-agents",
+          "revision": "accessed-2026-08-16",
+          "experimental": false
+        },
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://code.claude.com/docs/en/features-overview",
+          "revision": "accessed-2026-08-16",
+          "experimental": false
+        },
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://code.claude.com/docs/en/hooks",
+          "revision": "accessed-2026-08-16",
+          "experimental": false
+        },
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://docs.replit.com/core-concepts/agent/task-system",
+          "revision": "accessed-2026-08-16",
+          "experimental": false
+        },
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://help.openai.com/en/articles/20001066",
+          "revision": "accessed-2026-08-16",
+          "experimental": false
+        },
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://help.openai.com/en/articles/20001256-plugins-in-codexOpenAI",
+          "revision": "accessed-2026-08-16",
+          "experimental": false
+        }
+      ],
+      "import_mode": "PATTERN_ONLY",
+      "decision": "ADAPTED",
+      "implementation_paths": [
+        "docs/modes/CODEX_MODE.md",
+        "docs/modes/CODEX_MODE_POINTER.md",
+        "docs/modes/CODEX_MODE_STATE.json",
+        "schemas/v1/codex-mode-state.schema.json",
+        "scripts/validate-codex-mode.mjs",
+        ".agents/skills/codex-mode/SKILL.md",
+        ".github/agents/codex-mode.agent.md",
+        "docs/ADR-0012-CODEX-MODE-UX.md"
+      ],
+      "conformance_tests": [
+        "node scripts/validate-codex-mode.mjs",
+        "npm run doctor",
+        "npm run test:schemas",
+        "npm run test:knowledge"
+      ],
+      "replaced_or_avoided_custom_code": [
+        "No new TaskStore",
+        "No always-loaded full evidence context",
+        "No memory-as-authority",
+        "No bespoke UI application"
+      ],
+      "risks": [
+        "Stored heads become stale; activation must re-fetch them",
+        "Cross-product agent profile syntax may evolve",
+        "State mirror can diverge if post-mutation persistence is skipped"
+      ],
+      "rollback": "Remove v1.1 state/schema/validator/skill/profile and restore v1 mode/pointer; provider evidence and runtime authorities are unaffected."
+    }
+  ]
+}

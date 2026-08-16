@@ -15,7 +15,7 @@
     "build": "npm run build --workspaces --if-present",
     "build:gateway": "npm run build -w akashic-chatgpt-gateway",
     "test:schemas": "node scripts/validate-schemas.mjs",
-    "test:knowledge": "node scripts/validate-knowledge-packets.mjs && node scripts/validate-external-adoption-policy.mjs && npm --prefix experiments/orchestrator-bakeoff test",
+    "test:knowledge": "node scripts/validate-knowledge-packets.mjs && node scripts/validate-external-adoption-policy.mjs && node scripts/validate-codex-mode.mjs && npm --prefix experiments/orchestrator-bakeoff test",
     "test:core": "npm run test --workspaces --if-present",
     "test:gateway": "npm run test -w akashic-chatgpt-gateway",
     "test:cloudflare": "npm --prefix deploy/cloudflare-kernel test",

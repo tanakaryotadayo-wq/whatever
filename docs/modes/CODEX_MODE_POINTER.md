@@ -1,70 +1,76 @@
 ---
-schema: akashic.mode-pointer/v1
+schema: akashic.mode-pointer/v1.1
 mode_id: codex-mode
+mode_version: 1.1.0
 activation_phrase: "codexモード起動"
 updated_at: 2026-08-16
 ---
 
 # Codexモード起動ポインタ
 
-このファイルは、別セッションのAssistantが「codexモード起動」を受け取ったときに最初に読む固定ポインタ。
+## 最短bootstrap
 
-## 読み込み順序
+```text
+L0: このPointer
+L1: GitHub docs/modes/CODEX_MODE_STATE.json
+L2: GitHub docs/modes/CODEX_MODE.md（必要時のみ）
+L3: Stateが指すDrive Evidence（必要時のみ）
+```
 
-1. GitHub正本を読む。
+## GitHub正本
 
 ```text
 Repository: tanakaryotadayo-wq/whatever
-Path: docs/modes/CODEX_MODE.md
+Spec: docs/modes/CODEX_MODE.md
+State: docs/modes/CODEX_MODE_STATE.json
 Ref: default branch
+Provider branch: akashic/v0.10-codex-app-server-live
+Provider PR: 15
 ```
 
-2. GitHubが読めない場合、Driveで完全一致タイトルを検索する。
+## Drive fallback
 
 ```text
+Root:
+https://drive.google.com/drive/folders/1xrqptlQ_Ca6NQyYEFSrL9r9Skn81l05Y
+
+Spec title:
 CODEX_MODE.md
-```
 
-3. 現在のProvider P0成果物を読む。
+State title:
+CODEX_MODE_STATE.json
 
-```text
-Folder:
+Current retained source/evidence:
 https://drive.google.com/drive/folders/1IptDk7ePL2wUWXcLAVal8YtwiwCZgLew
-
-Manifest:
-MANIFEST_akashic_codex_app_server_p0_in_progress_20260816.json
-
-Status:
-AKASHIC_CODEX_APP_SERVER_P0_IN_PROGRESS_20260816.md
 ```
-
-4. GitHubの現在headを再取得し、保存時点のSHAを盲信しない。
 
 ## 現在地
 
 ```text
-Adapter implementation           PASS
-Fixture three-run certification  PASS
-Full regression suite            PASS
-Drive preservation               PASS
-Official Codex live three-run     NOT RUN
-Overall P0 certification          OPEN
+Status: PROVIDER_ATTEMPTED_FAILED_AND_BLOCKED
+Certification: OPEN
+PR #15: DRAFT
+Valid three-run receipt: ABSENT
 ```
 
-## 起動時の禁止事項
+過去の`NOT RUN`表現と、Drive上の`final evidence`という名前はsuperseded。Activation時は必ずGitHub Stateと現在headを再取得する。
 
-- ユーザーへ過去の詳細を再説明させない。
-- fixture成功をofficial Codex成功と呼ばない。
-- 3回連続Live PASS前にCERTIFIEDと報告しない。
-- メモリだけで開始しない。
-- 新しいAgent frameworkやTaskStoreへ逃げない。
-
-## 起動応答
+## コマンド
 
 ```text
-Codexモード起動。
-正本: <GitHub path @ current commit>
-Evidence: <Drive manifest>
-現在地: <status>
-次の一手: <one concrete gate>
+codexモード起動
+codexモード 状態
+codexモード 続行
+codexモード 診断
+codexモード 証拠
+codexモード 計画
+codexモード 終了
 ```
+
+## 起動時禁止
+
+- ユーザーへ過去の詳細を再説明させない
+- メモリだけで開始しない
+- fixture成功をofficial provider成功と呼ばない
+- valid three-run receiptなしでCERTIFIEDと報告しない
+- BLOCKED/FAILED/NO_RESULT成果物をrelease扱いしない

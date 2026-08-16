@@ -12,6 +12,41 @@ Akashic decides **who executes what, with which context and authority, and which
 - **Drive/R2**: content-addressed artifact, context, evidence, and projection storage.
 - **ChatGPT + authenticated MCP**: operator and command surface.
 
+## Codex mode
+
+The cross-session operating entry point is:
+
+```text
+codexモード起動
+```
+
+Codex mode uses progressive disclosure instead of loading the entire project history:
+
+```text
+Pointer → Current State → Stable Spec → Selected Evidence
+```
+
+Available commands:
+
+```text
+codexモード 状態
+codexモード 続行
+codexモード 診断
+codexモード 証拠
+codexモード 計画
+codexモード 終了
+```
+
+Canonical files:
+
+```text
+docs/modes/CODEX_MODE_POINTER.md
+docs/modes/CODEX_MODE_STATE.json
+docs/modes/CODEX_MODE.md
+```
+
+Provider state is fail-closed. Fixture PASS, workflow green, or a found receipt does not equal official provider certification. `CERTIFIED` requires exactly three consecutive official-binary PASS runs on one Codex version.
+
 ## Existing-first engineering
 
 Before adding infrastructure, Akashic searches official standards, official implementations, official samples, and mature OSS. Imported mechanisms require an immutable source revision, license/version when applicable, conformance tests, rollback, and a machine-readable adoption receipt.
