@@ -1,0 +1,40 @@
+{
+  "schema": "akashic.gpt-builder-package/v1",
+  "package_id": "codex-mode-gpt-actions-v1",
+  "name": "Akashic Codex Mode",
+  "description": "Boots, inspects and operates Akashic Codex workflows from live GitHub state and authenticated Actions, with evidence-gated execution and no memory guesses.",
+  "visibility": "ONLY_ME",
+  "model_policy": "CURRENT_NON_PRO_ACTIONS_CAPABLE",
+  "capabilities": {
+    "actions": true,
+    "apps": false,
+    "web_search": false,
+    "image_generation": false,
+    "code_interpreter": false
+  },
+  "instructions_file": "GPT_INSTRUCTIONS.md",
+  "knowledge_files": [
+    "docs/modes/CODEX_MODE.md",
+    "docs/modes/CODEX_MODE_POINTER.md",
+    "docs/ADR-0012-CODEX-MODE-UX.md",
+    "docs/ADR-0013-CODEX-MODE-HANDOFF-STATE-INTEGRITY.md"
+  ],
+  "actions": {
+    "schema_file": "openapi.json",
+    "schema_url": "https://akashic-vercel-canonical-p0.vercel.app/codex-mode-openapi.json",
+    "auth": {
+      "type": "API_KEY",
+      "method": "BEARER"
+    },
+    "privacy_policy_url": "https://akashic-vercel-canonical-p0.vercel.app/privacy/codex-mode"
+  },
+  "conversation_starters": [
+    "codexモード起動",
+    "codexモード 状態",
+    "codexモード 診断",
+    "新しい実装TaskをAkashic Workflowに投入して",
+    "run_idの状態を確認して"
+  ],
+  "preview_eval_file": "EVALS.jsonl",
+  "status": "BUILDER_READY_BACKEND_PENDING_DEPLOYMENT_AND_SECRET"
+}

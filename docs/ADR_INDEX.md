@@ -17,6 +17,7 @@ This index is the canonical ADR numbering map as of 2026-08-16.
 | ADR-0011 | Existing-First External Adoption | accepted |
 | ADR-0012 | Codex Mode Progressive Bootstrap and Lifecycle UX | accepted |
 | ADR-0013 | Codex Mode State Integrity and Role-Separated Handoff | accepted |
+| ADR-0014 | Codex Mode as a Private GPT with Actions | proposed / activation pending |
 
 ## Superseded filenames
 

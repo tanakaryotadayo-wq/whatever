@@ -10,7 +10,7 @@ Akashic decides **who executes what, with which context and authority, and which
 - **Vercel Workflow**: bounded `RunAgentTask` adapter and bake-off candidate, not yet the selected authority.
 - **Cloudflare Workflows**: third bounded comparison candidate, not a parallel authority.
 - **Drive/R2**: content-addressed artifact, context, evidence, and projection storage.
-- **ChatGPT + authenticated MCP**: operator and command surface.
+- **ChatGPT + authenticated MCP/Actions**: operator and command surfaces.
 
 ## Codex mode
 
@@ -60,6 +60,26 @@ State is a snapshot. `reconciled_against_main_head` is checked as ancestor-or-eq
 
 ```bash
 npm run codex:status
+```
+
+## Private GPT Actions surface
+
+`gpts/codex-mode/` contains a Builder-ready private GPT package:
+
+```text
+GPT_INSTRUCTIONS.md
+GPT_BUILDER_CONFIG.md
+KNOWLEDGE_INDEX.md
+openapi.json
+EVALS.jsonl
+GPT_PACKAGE.json
+PREVIEW_ACCEPTANCE.md
+```
+
+The GPT is a conversational client, not an authority. It boots current status through `/api/codex-mode/*` Actions and performs authenticated workflow mutations through the existing `/api/workflows/tasks/*` routes. The deployed Builder schema is served from `/codex-mode-openapi.json`, and the privacy policy from `/privacy/codex-mode`.
+
+```bash
+node scripts/validate-codex-mode-gpt.mjs
 ```
 
 ## Existing-first engineering

@@ -1,0 +1,56 @@
+{
+  "schema": "akashic.external-adoption-receipt-set/v1",
+  "receipts": [
+    {
+      "receipt_id": "codex-mode-gpt-actions-v1",
+      "packet_ids": ["KPK-001", "KPK-013"],
+      "problem": "Convert the Codex Mode conversational convention into a real action-capable private GPT without creating another authority.",
+      "sources": [
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://help.openai.com/en/articles/8554397-creating-and-editing-gpts-with-actions",
+          "revision": "accessed-2026-08-16",
+          "experimental": false
+        },
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://help.openai.com/en/articles/9442513",
+          "revision": "accessed-2026-08-16",
+          "experimental": false
+        }
+      ],
+      "import_mode": "BOUNDED_EXPERIMENT",
+      "decision": "ADAPTED",
+      "implementation_paths": [
+        "gpts/codex-mode/",
+        "deploy/vercel-chatgpt-app/lib/codex-mode-gpt-actions.js",
+        "deploy/vercel-chatgpt-app/app/api/codex-mode/",
+        "deploy/vercel-chatgpt-app/public/codex-mode-openapi.json",
+        "scripts/validate-codex-mode-gpt.mjs",
+        "docs/ADR-0014-CODEX-MODE-GPT-ACTIONS.md"
+      ],
+      "conformance_tests": [
+        "node scripts/validate-codex-mode-gpt.mjs",
+        "node --test deploy/vercel-chatgpt-app/tests/codex-mode-gpt-actions.test.mjs",
+        "npm run doctor",
+        "npm run test:knowledge",
+        "WORKFLOW_TARGET_WORLD=local npm run build:gateway"
+      ],
+      "replaced_or_avoided_custom_code": [
+        "No new Chat-side memory authority",
+        "No second TaskStore",
+        "No direct GitHub or Drive connector dependency inside the Actions GPT",
+        "No public OAuth layer before private v1 acceptance",
+        "No generic continue or repair mutation without a bounded backend contract"
+      ],
+      "risks": [
+        "GPT Actions and Apps cannot coexist in the same GPT",
+        "Bearer configuration must match Vercel and GPT Builder",
+        "Static Knowledge can become stale if Current State is uploaded by mistake",
+        "Repository completion does not prove GPT Builder Preview behavior",
+        "Public or multi-user use requires OAuth and a separate privacy review"
+      ],
+      "rollback": "Remove the GPT package, /api/codex-mode read routes, public schema and privacy route; keep existing MCP, workflow, GitHub and Drive contracts unchanged."
+    }
+  ]
+}
