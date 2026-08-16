@@ -1,0 +1,71 @@
+name: Export Codex Mode GPT Drive mirror
+
+on:
+  push:
+    branches:
+      - akashic/export-gpt-drive-v1
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Assemble mirror
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT=/tmp/akashic-codex-mode-gpt-drive
+          rm -rf "$ROOT"
+          mkdir -p "$ROOT/gpt-package"
+          cp docs/modes/CODEX_MODE_POINTER.md "$ROOT/"
+          cp docs/modes/CODEX_MODE_STATE.json "$ROOT/"
+          cp docs/modes/CODEX_MODE.md "$ROOT/"
+          cp docs/modes/CODEX_MODE_HANDOFF.json "$ROOT/"
+          cp docs/modes/MANIFEST_CODEX_MODE_20260816.json "$ROOT/"
+          cp -a gpts/akashic-codex-mode/. "$ROOT/gpt-package/"
+          git rev-parse HEAD > "$ROOT/SOURCE_COMMIT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const path = require('node:path');
+          const root = '/tmp/akashic-codex-mode-gpt-drive';
+          const records = [];
+          function walk(dir) {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) walk(full);
+              else if (entry.name !== 'DRIVE_MIRROR_MANIFEST.json') {
+                const bytes = fs.readFileSync(full);
+                records.push({
+                  path: path.relative(root, full),
+                  bytes: bytes.length,
+                  sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
+                });
+              }
+            }
+          }
+          walk(root);
+          records.sort((a, b) => a.path.localeCompare(b.path));
+          fs.writeFileSync(path.join(root, 'DRIVE_MIRROR_MANIFEST.json'), JSON.stringify({
+            schema: 'akashic.codex-mode-gpt-drive-mirror/v1',
+            source_repository: 'tanakaryotadayo-wq/whatever',
+            source_commit: fs.readFileSync(path.join(root, 'SOURCE_COMMIT'), 'utf8').trim(),
+            status: 'PACKAGE_READY_ACTION_DEPLOYMENT_PENDING',
+            files: records,
+          }, null, 2) + '\n');
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: akashic-codex-mode-gpt-drive-${{ github.sha }}
+          path: /tmp/akashic-codex-mode-gpt-drive
+          include-hidden-files: true
+          if-no-files-found: error
+          compression-level: 9
