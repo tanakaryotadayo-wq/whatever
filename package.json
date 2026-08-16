@@ -16,7 +16,7 @@
     "build:gateway": "npm run build -w akashic-chatgpt-gateway",
     "codex:status": "node scripts/codex-mode-status.mjs",
     "test:schemas": "node scripts/validate-schemas.mjs",
-    "test:knowledge": "node scripts/validate-knowledge-packets.mjs && node scripts/validate-external-adoption-policy.mjs && node scripts/validate-codex-mode.mjs && npm --prefix experiments/orchestrator-bakeoff test",
+    "test:knowledge": "node scripts/validate-knowledge-packets.mjs && node scripts/validate-external-adoption-policy.mjs && node scripts/validate-codex-mode.mjs && node scripts/validate-codex-mode-gpt.mjs && npm --prefix experiments/orchestrator-bakeoff test",
     "test:core": "npm run test --workspaces --if-present",
     "test:gateway": "npm run test -w akashic-chatgpt-gateway",
     "test:cloudflare": "npm --prefix deploy/cloudflare-kernel test",
