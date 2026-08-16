@@ -1,13 +1,59 @@
 {
   "schema": "akashic.workspace/v1",
   "name": "Akashic Agent Operating Layer",
-  "source_authority": {"provider": "github", "repository": "tanakaryotadayo-wq/whatever", "default_branch": "main"},
-  "workflow_authority": {"p0_backend": "temporal", "status": "provisional", "comparison_candidates": ["temporal", "vercel-workflows", "cloudflare-workflows"], "decision_harness": "experiments/orchestrator-bakeoff"},
-  "knowledge": {"registry": "knowledge/packet-registry.json", "packet_count": 30, "skills_root": ".agents/skills"},
-  "profiles": {
-    "container": {"purpose": ["contract-tests", "temporal-fixture", "ci", "knowledge-validation"]},
-    "cloud-cleanroom": {"purpose": ["reproducibility", "fault-injection", "orchestrator-bakeoff"]},
-    "provider-certification": {"purpose": ["real-provider-live-tests"], "blocks_core": false}
+  "source_authority": {
+    "provider": "github",
+    "repository": "tanakaryotadayo-wq/whatever",
+    "default_branch": "main"
   },
-  "commands": {"bootstrap": "npm install", "doctor": "npm run doctor", "test": "npm test", "knowledge": "npm run test:knowledge", "vertical_slice": "npm run test:p0", "codex_live": "npm run test:codex-live"}
+  "workflow_authority": {
+    "p0_backend": "temporal",
+    "status": "provisional",
+    "comparison_candidates": [
+      "temporal",
+      "vercel-workflows",
+      "cloudflare-workflows"
+    ],
+    "decision_harness": "experiments/orchestrator-bakeoff",
+    "vercel_adapter": "deploy/vercel-chatgpt-app/workflows/run-agent-task.js"
+  },
+  "knowledge": {
+    "registry": "knowledge/packet-registry.json",
+    "packet_count": 30,
+    "skills_root": ".agents/skills",
+    "external_adoption_policy": "knowledge/external-adoption-policy.json",
+    "adoption_receipts": "knowledge/adoption-receipts"
+  },
+  "profiles": {
+    "container": {
+      "purpose": [
+        "contract-tests",
+        "temporal-fixture",
+        "vercel-workflow-build",
+        "ci",
+        "knowledge-validation"
+      ]
+    },
+    "cloud-cleanroom": {
+      "purpose": [
+        "reproducibility",
+        "fault-injection",
+        "orchestrator-bakeoff"
+      ]
+    },
+    "provider-certification": {
+      "purpose": ["real-provider-live-tests"],
+      "blocks_core": false
+    }
+  },
+  "commands": {
+    "bootstrap": "npm install",
+    "doctor": "npm run doctor",
+    "test": "npm test",
+    "knowledge": "npm run test:knowledge",
+    "vertical_slice": "npm run test:p0",
+    "vercel_build": "npm run build:gateway",
+    "codex_live": "npm run test:codex-live",
+    "drive_live": "npm run test:drive-live"
+  }
 }

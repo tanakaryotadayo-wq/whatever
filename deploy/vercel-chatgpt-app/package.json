@@ -1,21 +1,26 @@
 {
   "name": "akashic-chatgpt-gateway",
-  "version": "0.6.0",
+  "version": "0.9.0",
   "private": true,
+  "type": "module",
   "scripts": {
+    "dev": "next dev",
     "build": "next build",
-    "test": "node --test tests/*.test.mjs"
-  },
-  "engines": {
-    "node": ">=20"
+    "start": "next start",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check lib/*.js workflows/*.js app/api/mcp/route.js app/api/health/route.js && node --test tests/*.test.mjs"
   },
   "dependencies": {
+    "@akashic/contracts": "0.7.0",
     "@modelcontextprotocol/server": "^2.0.0",
     "mcp-handler": "^2.0.0",
     "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "workflow": "4.6.0",
     "zod": "^4.2.0"
   },
-  "type": "module"
+  "engines": {
+    "node": ">=22"
+  }
 }
