@@ -15,13 +15,41 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.ref_name }}
-      - name: Record source identity
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Assemble standalone deployment bundle
+        shell: bash
         run: |
-          printf '%s\n' "$GITHUB_SHA" > deploy/vercel-chatgpt-app/SOURCE_COMMIT
+          rm -rf /tmp/akashic-vercel-bundle
+          cp -a deploy/vercel-chatgpt-app /tmp/akashic-vercel-bundle
+          mkdir -p /tmp/akashic-vercel-bundle/vendor/contracts
+          cp packages/contracts/package.json /tmp/akashic-vercel-bundle/vendor/contracts/package.json
+          cp -a packages/contracts/src /tmp/akashic-vercel-bundle/vendor/contracts/src
+          printf '%s\n' "27d07542ee6ed26f1d44d216c7316cd896d3d13c" > /tmp/akashic-vercel-bundle/SOURCE_COMMIT
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const file = '/tmp/akashic-vercel-bundle/package.json';
+          const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+          pkg.dependencies['@akashic/contracts'] = 'file:vendor/contracts';
+          fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\n');
+          NODE
+          cd /tmp/akashic-vercel-bundle
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          cat > PACKAGING.json <<'JSON'
+          {
+            "schema": "akashic.vercel-deployment-bundle/v1",
+            "source_repository": "tanakaryotadayo-wq/whatever",
+            "source_commit": "27d07542ee6ed26f1d44d216c7316cd896d3d13c",
+            "source_path": "deploy/vercel-chatgpt-app",
+            "packaging_change": "@akashic/contracts workspace dependency vendored as file:vendor/contracts",
+            "authority": "GitHub main remains source authority"
+          }
+          JSON
       - uses: actions/upload-artifact@v4
         with:
-          name: akashic-vercel-gateway-source-${{ github.sha }}
-          path: deploy/vercel-chatgpt-app
+          name: akashic-vercel-gateway-standalone-${{ github.sha }}
+          path: /tmp/akashic-vercel-bundle
           include-hidden-files: true
           if-no-files-found: error
           compression-level: 9
