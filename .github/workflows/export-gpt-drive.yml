@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.ref_name }}
+          ref: main
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -30,7 +30,7 @@ jobs:
           cp docs/modes/CODEX_MODE.md "$ROOT/"
           cp docs/modes/CODEX_MODE_HANDOFF.json "$ROOT/"
           cp docs/modes/MANIFEST_CODEX_MODE_20260816.json "$ROOT/"
-          cp -a gpts/akashic-codex-mode/. "$ROOT/gpt-package/"
+          cp -a gpts/codex-mode/. "$ROOT/gpt-package/"
           git rev-parse HEAD > "$ROOT/SOURCE_COMMIT"
           node - <<'NODE'
           const fs = require('node:fs');
