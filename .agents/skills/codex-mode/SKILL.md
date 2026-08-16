@@ -1,17 +1,18 @@
 ---
 name: codex-mode
-description: Activate or resume the Akashic Codex App Server workstream. Use when the user says "codexモード起動" or asks for Codex mode status, continuation, diagnosis, evidence, planning, or closeout.
+description: Activate, resume, diagnose, hand off, or close the Akashic Codex App Server workstream with progressive loading and evidence-gated adoption.
 ---
 
-# Codex Mode Skill
+# Codex Mode Skill v1.2
 
 ## Bootstrap
 
 1. Read `docs/modes/CODEX_MODE_POINTER.md`.
 2. Read `docs/modes/CODEX_MODE_STATE.json`.
-3. Re-fetch current GitHub main/provider heads and PR state.
-4. Read `docs/modes/CODEX_MODE.md` only when the requested command needs operating rules.
-5. Load only the Evidence referenced by the selected workstream.
+3. Re-fetch current main/provider heads and PR state.
+4. For RESUME/HANDOFF, read `docs/modes/CODEX_MODE_HANDOFF.json`.
+5. Read `docs/modes/CODEX_MODE.md` only when operating rules are needed.
+6. Load only Evidence referenced by the selected workstream.
 
 Do not ask the user to repeat prior project history.
 
@@ -23,18 +24,27 @@ Do not ask the user to repeat prior project history.
 - `codexモード 診断` → DIAGNOSE
 - `codexモード 証拠` → EVIDENCE
 - `codexモード 計画` → PLAN
+- `codexモード 引継ぎ` → HANDOFF
 - `codexモード 終了` → CLOSE
 
-Ambiguous requests default to STATUS, not mutation.
+Ambiguous requests default to STATUS.
+
+## Role pipeline
+
+1. `SUPERVISOR` creates or refreshes the Work Packet.
+2. `EXECUTOR` changes only allowed paths and returns files/commands/tests/artifacts/risks.
+3. `VERIFIER` independently checks DoD, digests, regression and provenance.
+4. `SUPERVISOR` updates State/Handoff and decides adoption.
+
+The same runtime may perform all roles sequentially, but it must not collapse their contracts.
 
 ## Startup response
 
-Return the compact Status Card first:
-
 ```text
-Codexモード v1.1
+Codexモード v1.2
 Phase: ...
 Status: ...
+Role: ...
 Blocker: ...
 Next: ...
 Evidence: ...
@@ -42,11 +52,13 @@ Evidence: ...
 
 ## Hard boundaries
 
-- GitHub is source authority.
-- Drive is Artifact/Evidence/Handoff, not Task authority.
+- GitHub is Source Authority.
+- Drive is Artifact/Evidence/Handoff, not Task Authority.
 - Memory is an index, not truth.
+- State is a snapshot; compare its main head as ancestor-or-equal, not exact self-reference.
 - Fixture PASS is not official provider PASS.
-- A valid receipt must prove exactly three consecutive PASS runs on one official Codex version.
-- Do not reuse the words final, release, or certified for FAILED, BLOCKED, or NO_RESULT attempts.
-- In PLAN mode, do not mutate.
-- On failure, append evidence and preserve the next restart point.
+- Valid certification requires exactly three consecutive PASS runs on one official Codex version.
+- Do not use final/release/certified for FAILED, BLOCKED, or NO_RESULT.
+- PLAN mode cannot mutate.
+- On failure, append Evidence and update the Handoff restart point.
+- Do not repeat a failed route without a changed input or falsifiable hypothesis.
