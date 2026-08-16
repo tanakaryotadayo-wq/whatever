@@ -1,0 +1,61 @@
+[
+  {
+    "at": "2026-08-16T04:59:15.308Z",
+    "direction": "out",
+    "message": {
+      "id": 1,
+      "method": "initialize",
+      "params": {
+        "clientInfo": {
+          "name": "akashic-codex-app-server-adapter",
+          "title": "Akashic Codex App Server Adapter",
+          "version": "0.10.0"
+        },
+        "capabilities": {
+          "experimentalApi": false,
+          "requestAttestation": false,
+          "optOutNotificationMethods": null,
+          "extensions": null
+        }
+      }
+    }
+  },
+  {
+    "at": "2026-08-16T04:59:15.454Z",
+    "direction": "out",
+    "message": {
+      "method": "initialized",
+      "params": {}
+    }
+  },
+  {
+    "at": "2026-08-16T04:59:15.455Z",
+    "direction": "out",
+    "message": {
+      "id": 2,
+      "method": "model/list",
+      "params": {
+        "cursor": null,
+        "limit": 100,
+        "includeHidden": false
+      }
+    }
+  },
+  {
+    "at": "2026-08-16T04:59:15.456Z",
+    "direction": "out",
+    "message": {
+      "id": 3,
+      "method": "thread/start",
+      "params": {
+        "cwd": "<WORKSPACE>",
+        "model": "gpt-5.6-sol",
+        "serviceTier": "priority",
+        "approvalPolicy": "never",
+        "sandbox": "workspace-write",
+        "ephemeral": false,
+        "serviceName": "akashic-live-two-turn-certification"
+      }
+    }
+  }
+]

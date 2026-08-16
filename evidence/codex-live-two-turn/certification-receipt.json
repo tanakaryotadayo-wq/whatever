@@ -1,0 +1,15 @@
+{
+  "schema": "akashic.codex-app-server-certification-receipt/v1",
+  "status": "FAILED",
+  "codex_version": "codex-cli 0.147.0",
+  "protocol_schema_sha256": "sha256:84f7f2d14469d7c856494081abe49b0cb540a7588e56bb3ee3212328d7baef61",
+  "consecutive_passes": 0,
+  "required_consecutive_passes": 3,
+  "run_ids": [
+    "codex-live-1-b382c331-7370-4838-a491-e69d07e0ba80"
+  ],
+  "thread_ids": [
+    null
+  ],
+  "created_at": "2026-08-16T04:59:15.480Z"
+}

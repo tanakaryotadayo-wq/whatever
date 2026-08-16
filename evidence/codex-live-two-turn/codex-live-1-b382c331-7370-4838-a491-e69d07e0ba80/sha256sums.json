@@ -1,0 +1,31 @@
+{
+  "schema": "akashic.evidence-sha256sums/v1",
+  "generated_at": "2026-08-16T04:59:15.480Z",
+  "files": [
+    {
+      "path": "events.json",
+      "sha256": "sha256:837df78fe11d0fbc29b126ba906f8c3c12a5c96f126429093be47a23f79808f9",
+      "size": 1626
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "sha256:226aeaa92da6da938f29c122afa4896b7780143d36075041bf9cf4bf4456c114",
+      "size": 2178
+    },
+    {
+      "path": "requests.json",
+      "sha256": "sha256:c9895519ee5ccd672ad1785e7fadcf72b2b24e67904a4bae63cc8f4c1649f89b",
+      "size": 1339
+    },
+    {
+      "path": "sanitized-protocol.jsonl",
+      "sha256": "sha256:957246ad531d2db50fb6a32ed23ede30827164f69f7bcce5d89582897209ca71",
+      "size": 8335
+    },
+    {
+      "path": "stderr.log",
+      "sha256": "sha256:646ff8fc730c0b402cdc283f269a8c881ee434ecfff0d62b72a4d1737be63758",
+      "size": 622
+    }
+  ]
+}

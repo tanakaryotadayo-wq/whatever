@@ -1,0 +1,64 @@
+name: Hosted Codex App Server live certification probe
+
+on:
+  push:
+    branches:
+      - akashic/v0.10-codex-app-server-live
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codex-hosted-live-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hosted-provider:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      AKASHIC_CODEX_LIVE: "1"
+      AKASHIC_CODEX_LIVE_RUNS: "3"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install exact repository graph
+        run: npm ci
+      - name: Record provider availability
+        id: provider
+        shell: bash
+        run: |
+          mkdir -p evidence/codex-hosted-probe
+          if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+            printf '{"schema":"akashic.codex-provider-probe/v1","status":"BLOCKED","reason":"OPENAI_API_KEY repository secret is absent","runner":"macos-15","commit":"%s"}\n' "$GITHUB_SHA" > evidence/codex-hosted-probe/provider.json
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          else
+            printf '{"schema":"akashic.codex-provider-probe/v1","status":"READY","runner":"macos-15","commit":"%s"}\n' "$GITHUB_SHA" > evidence/codex-hosted-probe/provider.json
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Resolve and install official Codex CLI
+        if: steps.provider.outputs.available == 'true'
+        shell: bash
+        run: |
+          CODEX_NPM_VERSION="$(npm view @openai/codex version)"
+          npm install --global "@openai/codex@${CODEX_NPM_VERSION}"
+          codex --version | tee evidence/codex-hosted-probe/codex-version.txt
+          printf '%s\n' "$CODEX_NPM_VERSION" > evidence/codex-hosted-probe/npm-version.txt
+      - name: Official App Server three-run certification
+        if: steps.provider.outputs.available == 'true'
+        run: npm run test:codex-live
+      - name: Upload hosted provider evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-hosted-provider-${{ github.sha }}
+          path: |
+            evidence/codex-hosted-probe
+            evidence/codex-live-two-turn
+          if-no-files-found: error
+          retention-days: 30

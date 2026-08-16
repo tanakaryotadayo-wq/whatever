@@ -1,0 +1,51 @@
+[
+  {
+    "at": "2026-08-16T04:59:15.455Z",
+    "direction": "in",
+    "message": {
+      "method": "configWarning",
+      "params": {
+        "summary": "Invalid configuration; using defaults.",
+        "details": "<HOME>/work/_temp/codex-openai_gpt-4.1-chat/config.toml:8:12: `wire_api = \"chat\"` is no longer supported.\nHow to fix: set `wire_api = \"responses\"` in your provider config.\nMore info: https://github.com/openai/codex/discussions/7782",
+        "path": "<HOME>/work/_temp/codex-openai_gpt-4.1-chat/config.toml",
+        "range": {
+          "start": {
+            "line": 8,
+            "column": 12
+          },
+          "end": {
+            "line": 8,
+            "column": 17
+          }
+        }
+      },
+      "emittedAtMs": 1786856355453
+    }
+  },
+  {
+    "at": "2026-08-16T04:59:15.455Z",
+    "direction": "in",
+    "message": {
+      "method": "configWarning",
+      "params": {
+        "summary": "Codex could not find bubblewrap on PATH. Install bubblewrap with your OS package manager. See the sandbox prerequisites: https://developers.openai.com/codex/concepts/sandboxing#prerequisites. Codex will use the bundled bubblewrap in the meantime.",
+        "details": null
+      },
+      "emittedAtMs": 1786856355453
+    }
+  },
+  {
+    "at": "2026-08-16T04:59:15.455Z",
+    "direction": "in",
+    "message": {
+      "method": "remoteControl/status/changed",
+      "params": {
+        "status": "disabled",
+        "serverName": "runnervmzvulz",
+        "installationId": "d7ed5060-5735-409c-8c02-fba6b98df072",
+        "environmentId": null
+      },
+      "emittedAtMs": 1786856355453
+    }
+  }
+]

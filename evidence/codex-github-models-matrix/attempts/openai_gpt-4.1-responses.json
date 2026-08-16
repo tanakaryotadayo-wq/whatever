@@ -1,0 +1,8 @@
+{
+  "model": "openai/gpt-4.1",
+  "wire_api": "responses",
+  "exit_code": 1,
+  "receipt_found": true,
+  "sanitized_log_tail": "\n> akashic-agent-operating-layer@0.7.0 test:codex-live\n> bash scripts/codex-live-acceptance.sh\n\ncodex-cli 0.147.0\nTAP version 13\n# Subtest: JSONL protocol performs initialize before model/list and starts one thread\nok 1 - JSONL protocol performs initialize before model/list and starts one thread\n  ---\n  duration_ms: 46.993297\n  type: 'test'\n  ...\n# Subtest: interactive App Server requests fail closed even when emitted before the waiter is installed\nok 2 - interactive App Server requests fail closed even when emitted before the waiter is installed\n  ---\n  duration_ms: 35.398877\n  type: 'test'\n  ...\n# Subtest: fake App Server closes the same-thread delta-only two-turn contract\nok 3 - fake App Server closes the same-thread delta-only two-turn contract\n  ---\n  duration_ms: 200.661711\n  type: 'test'\n  ...\n1..3\n# tests 3\n# suites 0\n# pass 3\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 5262.784571\n{\"status\":\"FAILED\",\"codex_version\":\"codex-cli 0.147.0\",\"protocol_schema_sha256\":\"sha256:84f7f2d14469d7c856494081abe49b0cb540a7588e56bb3ee3212328d7baef61\",\"consecutive_passes\":0,\"receipt\":\"evidence/codex-live-two-turn/certification-receipt.json\"}\nError: turn ended with status failed\n    at runSingleCertification (file:///home/runner/work/whatever/whatever/packages/codex-app-server-adapter/src/run-certification.js:299:19)\n    at async file:///home/runner/work/whatever/whatever/scripts/codex-app-server-live-two-turn.mjs:38:17\n",
+  "credential_value_recorded": false
+}

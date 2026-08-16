@@ -1,0 +1,8 @@
+{
+  "schema": "akashic.codex-provider-certification-status/v1",
+  "status": "BLOCKED",
+  "reason": "OPENAI_API_KEY repository secret is absent",
+  "runner": "github-hosted-macos-15",
+  "source_commit": "57f8f53f5074680e54557cbd43a20e37ec393a6b",
+  "recorded_at": "2026-08-16T04:38:41.749Z"
+}

@@ -1,0 +1,51 @@
+{
+  "schema": "akashic.codex-live-two-turn-evidence/v1",
+  "status": "FAILED",
+  "run_id": "codex-live-1-b382c331-7370-4838-a491-e69d07e0ba80",
+  "iteration": 1,
+  "codex_version": "codex-cli 0.147.0",
+  "protocol_schema_sha256": "sha256:84f7f2d14469d7c856494081abe49b0cb540a7588e56bb3ee3212328d7baef61",
+  "started_at": "2026-08-16T04:59:15.304Z",
+  "completed_at": "2026-08-16T04:59:15.459Z",
+  "task_id": "codex-app-server-ta[REDACTED_SECRET]",
+  "context_id": "codex-app-server-context-b382c331-7370-4838-a491-e69d07e0ba80",
+  "logical_attempt_id": "codex-app-server-attempt-b382c331-7370-4838-a491-e69d07e0ba80",
+  "thread_id": null,
+  "turn_1_id": null,
+  "turn_2_id": null,
+  "thread_start_count": 0,
+  "turn_start_count": 0,
+  "turn_1_status": null,
+  "turn_1_outcome": null,
+  "turn_2_status": null,
+  "turn_2_outcome": null,
+  "context_seq_before": 0,
+  "context_seq_after": null,
+  "task_capsule_resent_on_turn_2": false,
+  "artifact_refs": [],
+  "event_counts": {
+    "configWarning": 2,
+    "remoteControl/status/changed": 1
+  },
+  "model": "gpt-5.6-sol",
+  "reasoning_effort": "low",
+  "service_tier": "priority",
+  "initialize": {
+    "userAgent": "akashic-codex-app-server-adapter/0.147.0 (Ubuntu 24.4.0; x86_64) unknown (akashic-codex-app-server-adapter; 0.10.0)",
+    "codexHome": "<HOME>/work/_temp/codex-openai_gpt-4.1-chat",
+    "platformFamily": "unix",
+    "platformOs": "linux"
+  },
+  "error": {
+    "code": "CODEX_RPC_ERROR",
+    "message": "failed to load configuration: <HOME>/work/_temp/codex-openai_gpt-4.1-chat/config.toml:8:12: `wire_api = \"chat\"` is no longer supported.\nHow to fix: set `wire_api = \"responses\"` in your provider config.\nMore info: https://github.com/openai/codex/discussions/7782",
+    "details": {
+      "method": "thread/start",
+      "rpcError": {
+        "code": -32600,
+        "message": "failed to load configuration: <HOME>/work/_temp/codex-openai_gpt-4.1-chat/config.toml:8:12: `wire_api = \"chat\"` is no longer supported.\nHow to fix: set `wire_api = \"responses\"` in your provider config.\nMore info: https://github.com/openai/codex/discussions/7782"
+      }
+    }
+  },
+  "credential_leak_scan_passed": true
+}
