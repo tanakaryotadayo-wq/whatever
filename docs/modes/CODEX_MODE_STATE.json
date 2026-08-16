@@ -1,14 +1,15 @@
 {
-  "schema": "akashic.codex-mode-state/v1",
+  "schema": "akashic.codex-mode-state/v1.1",
   "mode_id": "codex-mode",
-  "mode_version": "1.1.0",
+  "mode_version": "1.2.0",
   "activation_phrase": "codexモード起動",
-  "observed_at": "2026-08-16T05:34:00Z",
+  "observed_at": "2026-08-16T05:45:00Z",
   "freshness_ttl_seconds": 900,
   "phase": "OFFICIAL_PROVIDER_CERTIFICATION",
   "status": "PROVIDER_ATTEMPTED_FAILED_AND_BLOCKED",
   "certification": "OPEN",
   "task_projection": "BLOCKED",
+  "current_role": "SUPERVISOR",
   "default_operation_mode": "EXECUTE_WHEN_SAFE",
   "authorities": {
     "source": "github",
@@ -16,18 +17,32 @@
     "provider_runtime": "official-codex-app-server",
     "workflow_authority": "temporal-provisional"
   },
+  "integrity": {
+    "state_semantics": "SNAPSHOT",
+    "main_head_comparison": "ANCESTOR_OR_EQUAL",
+    "manifest_path": "docs/modes/MANIFEST_CODEX_MODE_20260816.json",
+    "handoff_path": "docs/modes/CODEX_MODE_HANDOFF.json",
+    "audit_path": "docs/AUDIT-2026-08-16.json"
+  },
   "source": {
     "repository": "tanakaryotadayo-wq/whatever",
     "default_branch": "main",
-    "observed_main_head": "8734962b2ae1503fd34ea5366f6fb094d6399f71",
+    "reconciled_against_main_head": "0ef4e0daec408e7d812c6c848e999463e1c299e7",
+    "main_head_relation": "ANCESTOR_OR_EQUAL",
     "canonical_spec_path": "docs/modes/CODEX_MODE.md",
     "state_path": "docs/modes/CODEX_MODE_STATE.json",
+    "handoff_path": "docs/modes/CODEX_MODE_HANDOFF.json",
     "provider_branch": "akashic/v0.10-codex-app-server-live",
     "observed_provider_head": "e18e72df2460f5c7921b359b33857418d873ed27",
+    "provider_head_semantics": "EXACT_AT_OBSERVED_AT",
     "provider_pull_request": {
       "number": 15,
       "state": "OPEN",
       "draft": true
+    },
+    "last_ux_merge": {
+      "pull_request": 17,
+      "commit": "0ef4e0daec408e7d812c6c848e999463e1c299e7"
     },
     "superseded_provider_branch": "akashic/p0-codex-app-server-live-two-turn"
   },
@@ -35,6 +50,7 @@
     "root_folder_id": "1xrqptlQ_Ca6NQyYEFSrL9r9Skn81l05Y",
     "pointer_file_id": "1_6aNb4TrxIIbrYqz4RsW133SeHE_3vmw",
     "spec_file_id": "1De-Ua7UQXrl6OFYlYf2s42ENp3lVE1kl",
+    "state_file_id": "1vA-kBmFyXj_-4bfw6S_DqYe4q0wf-aml",
     "retained_in_progress_folder_id": "1IptDk7ePL2wUWXcLAVal8YtwiwCZgLew",
     "retained_manifest_title": "MANIFEST_akashic_codex_app_server_p0_in_progress_20260816.json",
     "quarantine_folder_id": "1T18SSIWsrJPBH6Grv9i2wug-W4N25MXy",
@@ -61,7 +77,10 @@
       "official_codex_binary": false,
       "reason": "OPENAI_API_KEY repository secret is absent",
       "evidence_path": "evidence/codex-hosted-probe/latest.json",
-      "source_commit": "57f8f53f5074680e54557cbd43a20e37ec393a6b"
+      "source_commit": "57f8f53f5074680e54557cbd43a20e37ec393a6b",
+      "do_not_repeat_without_change": [
+        "repository secret or credentialed self-hosted runner becomes available"
+      ]
     },
     {
       "attempt_id": "github-models-gpt-4.1",
@@ -72,7 +91,10 @@
       "exit_code": 1,
       "receipt_found": true,
       "evidence_path": "evidence/codex-github-models/latest.json",
-      "source_commit": "18e8623bc463052c373e5865d02b1d75d838e2b3"
+      "source_commit": "18e8623bc463052c373e5865d02b1d75d838e2b3",
+      "do_not_repeat_without_change": [
+        "protocol/provider diagnosis changes the hypothesis"
+      ]
     },
     {
       "attempt_id": "github-models-wire-matrix",
@@ -81,7 +103,10 @@
       "provider": "github-models",
       "reason": "No tested model/wire_api combination completed one-run smoke certification",
       "evidence_path": "evidence/codex-github-models-matrix/latest.json",
-      "source_commit": "aac8fb767d85f4ecf72f09730092568868f497bc"
+      "source_commit": "aac8fb767d85f4ecf72f09730092568868f497bc",
+      "do_not_repeat_without_change": [
+        "new provider compatibility evidence exists"
+      ]
     }
   ],
   "capabilities": {
@@ -92,6 +117,11 @@
     "official_live_three_run": "FAIL_OR_BLOCKED",
     "valid_certification_receipt": false
   },
+  "roles": {
+    "SUPERVISOR": "fix goal, scope, DoD, authority and adoption decision",
+    "EXECUTOR": "change only allowed paths and return evidence",
+    "VERIFIER": "independently validate DoD, digests, regression and provenance"
+  },
   "blockers": [
     {
       "blocker_id": "official-runtime-credential",
@@ -100,50 +130,88 @@
     },
     {
       "blocker_id": "provider-compatibility",
-      "description": "GitHub Models attempts failed before one-run smoke certification; logs/protocol compatibility require diagnosis before retry.",
+      "description": "GitHub Models attempts failed before one-run smoke certification; retained logs require diagnosis before retry.",
       "hard": true
     }
   ],
   "commands": [
-    {"phrase": "codexモード起動", "intent": "BOOT", "mutation": "CONDITIONAL"},
-    {"phrase": "codexモード 状態", "intent": "STATUS", "mutation": "NONE"},
-    {"phrase": "codexモード 続行", "intent": "RESUME", "mutation": "ALLOWED"},
-    {"phrase": "codexモード 診断", "intent": "DIAGNOSE", "mutation": "REPAIR_AFTER_REPORT"},
-    {"phrase": "codexモード 証拠", "intent": "EVIDENCE", "mutation": "NONE"},
-    {"phrase": "codexモード 計画", "intent": "PLAN", "mutation": "NONE"},
-    {"phrase": "codexモード 終了", "intent": "CLOSE", "mutation": "PERSIST_ONLY"}
+    {
+      "phrase": "codexモード起動",
+      "intent": "BOOT",
+      "mutation": "CONDITIONAL"
+    },
+    {
+      "phrase": "codexモード 状態",
+      "intent": "STATUS",
+      "mutation": "NONE"
+    },
+    {
+      "phrase": "codexモード 続行",
+      "intent": "RESUME",
+      "mutation": "ALLOWED"
+    },
+    {
+      "phrase": "codexモード 診断",
+      "intent": "DIAGNOSE",
+      "mutation": "REPAIR_AFTER_REPORT"
+    },
+    {
+      "phrase": "codexモード 証拠",
+      "intent": "EVIDENCE",
+      "mutation": "NONE"
+    },
+    {
+      "phrase": "codexモード 計画",
+      "intent": "PLAN",
+      "mutation": "NONE"
+    },
+    {
+      "phrase": "codexモード 引継ぎ",
+      "intent": "HANDOFF",
+      "mutation": "PERSIST_ONLY"
+    },
+    {
+      "phrase": "codexモード 終了",
+      "intent": "CLOSE",
+      "mutation": "PERSIST_ONLY"
+    }
   ],
   "read_layers": {
-    "L0": "00 - CODEX_MODE_POINTER.md",
+    "L0": "docs/modes/CODEX_MODE_POINTER.md",
     "L1": "docs/modes/CODEX_MODE_STATE.json",
+    "L1_5": "docs/modes/CODEX_MODE_HANDOFF.json",
     "L2": "docs/modes/CODEX_MODE.md",
-    "L3": "selected manifests, attempts, traces, bundles"
+    "L3": "selected manifests, attempts, traces and bundles"
   },
   "next_actions": [
     {
       "priority": 0,
       "action_id": "diagnose-failed-provider-attempts",
-      "title": "Read retained failure evidence and isolate the protocol/provider incompatibility without repeating the same matrix.",
+      "title": "Read retained failure evidence and isolate protocol/provider incompatibility without repeating the same matrix.",
       "assistant_executable_now": true
     },
     {
       "priority": 1,
       "action_id": "run-credentialed-official-three-pass",
-      "title": "Run the official same-thread two-turn certification exactly three times on one Codex version.",
+      "title": "Run official same-thread two-turn certification exactly three times on one Codex version.",
       "assistant_executable_now": false,
-      "requires": ["credentialed official Codex runtime or connected self-hosted runner"]
+      "requires": [
+        "credentialed official Codex runtime or connected self-hosted runner"
+      ]
     },
     {
       "priority": 2,
       "action_id": "publish-certification",
       "title": "Create certification receipt, mark PR ready, merge, and preserve Drive evidence.",
       "assistant_executable_now": false,
-      "requires": ["valid exact-three PASS receipt"]
+      "requires": [
+        "valid exact-three PASS receipt"
+      ]
     }
   ],
   "status_card": {
     "blocker": "No valid three-run official Codex receipt; hosted secret is absent and GitHub Models attempts failed.",
     "next": "Diagnose retained provider failure evidence; execute three-pass only when an official credentialed runtime is available.",
-    "evidence": "PR #15 and provider branch evidence/*/latest.json"
+    "evidence": "docs/modes/CODEX_MODE_HANDOFF.json, PR #15, evidence/*/latest.json"
   }
 }
