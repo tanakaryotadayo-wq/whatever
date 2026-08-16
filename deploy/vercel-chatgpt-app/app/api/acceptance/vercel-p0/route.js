@@ -157,12 +157,12 @@ export async function GET(request) {
       delta_id: `valid-${nonce}`,
       expected_seq: snapshot.context_seq,
     };
+    const activeReplay = await startVercelWorkflow(task);
     const resume = await applyWhenHookReady(runId, validDelta);
     const terminal = await waitForState(
       runId,
       (value) => ["COMPLETED", "FAILED", "CANCELED"].includes(value?.snapshot?.state),
     );
-    const replay = await startVercelWorkflow(task);
     const finalSnapshot = terminal.snapshot;
 
     const checks = {
@@ -176,8 +176,8 @@ export async function GET(request) {
       verification_present: Boolean(finalSnapshot.verification_report_ref),
       provenance_present: Boolean(finalSnapshot.provenance_ref),
       adoption_present: Boolean(finalSnapshot.adoption_ref),
-      duplicate_submit_idempotent:
-        replay.idempotent_replay === true && replay.run_id === runId,
+      active_duplicate_submit_idempotent:
+        activeReplay.idempotent_replay === true && activeReplay.run_id === runId,
     };
     const passed = Object.values(checks).every(Boolean);
     const completedAt = new Date().toISOString();
@@ -210,10 +210,10 @@ export async function GET(request) {
             poll_attempts: terminal.poll_attempts,
             snapshot: finalSnapshot,
           },
-          replay: {
-            run_id: replay.run_id,
-            idempotent_replay: replay.idempotent_replay,
-            owner_registration: replay.owner_registration,
+          active_replay: {
+            run_id: activeReplay.run_id,
+            idempotent_replay: activeReplay.idempotent_replay,
+            owner_registration: activeReplay.owner_registration,
           },
         },
       },
