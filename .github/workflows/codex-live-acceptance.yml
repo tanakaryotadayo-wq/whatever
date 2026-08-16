@@ -38,7 +38,6 @@ jobs:
 
   codex-two-turn:
     needs: contract
-    if: ${{ vars.CODEX_LIVE_RUNNER_ENABLED == 'true' }}
     runs-on: [self-hosted, macOS, akashic-codex]
     timeout-minutes: 45
     steps:
