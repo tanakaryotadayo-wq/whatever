@@ -1,0 +1,213 @@
+name: Official Codex GitHub Models compatibility matrix
+
+on:
+  push:
+    branches:
+      - akashic/v0.10-codex-app-server-live
+    paths:
+      - .github/workflows/codex-github-models-matrix.yml
+      - packages/codex-app-server-adapter/**
+      - fixtures/codex-live-two-turn/**
+      - scripts/codex-app-server-live-three.mjs
+      - package.json
+      - package-lock.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  models: read
+
+concurrency:
+  group: codex-github-models-matrix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  matrix-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      GITHUB_MODELS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      AKASHIC_CODEX_LIVE: "1"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: akashic/v0.10-codex-app-server-live
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install repository and official Codex
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          VERSION="$(npm view @openai/codex version)"
+          npm install --global "@openai/codex@${VERSION}"
+          mkdir -p evidence/codex-github-models-matrix
+          codex --version | tee evidence/codex-github-models-matrix/codex-version.txt
+          printf '%s\n' "$VERSION" > evidence/codex-github-models-matrix/npm-version.txt
+      - name: Discover model candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.request
+          from pathlib import Path
+          req=urllib.request.Request('https://models.github.ai/catalog/models',headers={
+              'Authorization':f"Bearer {os.environ['GITHUB_MODELS_TOKEN']}",
+              'Accept':'application/vnd.github+json',
+              'X-GitHub-Api-Version':'2022-11-28',
+              'User-Agent':'akashic-codex-matrix',
+          })
+          rows=[]
+          error=None
+          try:
+              with urllib.request.urlopen(req,timeout=30) as r: data=json.load(r)
+              rows=data if isinstance(data,list) else data.get('models',[])
+          except Exception as exc:
+              error=f'{type(exc).__name__}: {exc}'
+          ids=[]
+          for row in rows:
+              if isinstance(row,dict):
+                  value=row.get('id') or row.get('name') or row.get('model')
+                  if value and value not in ids: ids.append(value)
+          priority=[]
+          for needle in ('openai/gpt-5','openai/gpt-4.1','openai/gpt-4o','gpt-5','gpt-4.1','gpt-4o'):
+              priority.extend([x for x in ids if needle in x.lower() and x not in priority])
+          priority.extend([x for x in ids if 'openai/' in x.lower() and x not in priority])
+          candidates=(priority or ['openai/gpt-4.1'])[:5]
+          Path('evidence/codex-github-models-matrix/catalog.json').write_text(json.dumps({
+              'schema':'akashic.github-models-catalog/v1','catalog_count':len(ids),
+              'candidates':candidates,'catalog_error':error,'credential_value_recorded':False
+          },indent=2)+'\n')
+          Path(os.environ['RUNNER_TEMP'],'model-candidates.txt').write_text('\n'.join(candidates)+'\n')
+          PY
+      - name: Probe custom-provider combinations and certify winner
+        id: probe
+        shell: bash
+        run: |
+          set +e
+          export GITHUB_TOKEN="$GITHUB_MODELS_TOKEN"
+          ROOT="$PWD"
+          MATRIX="$ROOT/evidence/codex-github-models-matrix"
+          mkdir -p "$MATRIX/attempts"
+          winner_model=""
+          winner_wire=""
+          while IFS= read -r model; do
+            [[ -n "$model" ]] || continue
+            for wire in responses chat; do
+              safe="$(printf '%s-%s' "$model" "$wire" | tr '/: ' '___')"
+              codex_home="$RUNNER_TEMP/codex-$safe"
+              rm -rf "$codex_home" "$ROOT/evidence/codex-live-two-turn"
+              mkdir -p "$codex_home"
+              cat > "$codex_home/config.toml" <<EOF
+          model = "$model"
+          model_provider = "github_models"
+
+          [model_providers.github_models]
+          name = "GitHub Models"
+          base_url = "https://models.github.ai/inference"
+          env_key = "GITHUB_MODELS_TOKEN"
+          wire_api = "$wire"
+          EOF
+              CODEX_HOME="$codex_home" AKASHIC_CODEX_LIVE_RUNS=1 npm run test:codex-live >"$MATRIX/attempts/$safe.log" 2>&1
+              rc=$?
+              receipt="$(find "$ROOT/evidence/codex-live-two-turn" -name certification-receipt.json -type f 2>/dev/null | sort | tail -n 1)"
+              python3 - "$MATRIX/attempts/$safe.json" "$model" "$wire" "$rc" "$receipt" <<'PY'
+          import json,re,sys
+          from pathlib import Path
+          log=Path(sys.argv[1].replace('.json','.log')).read_text(errors='ignore')
+          log=re.sub(r'sk-(?:proj-)?[A-Za-z0-9_\-]+','[REDACTED]',log)
+          log=re.sub(r'(?i)(authorization|api[_-]?key|token)\s*[:=]\s*\S+',r'\1=[REDACTED]',log)
+          Path(sys.argv[1]).write_text(json.dumps({
+              'model':sys.argv[2],'wire_api':sys.argv[3],'exit_code':int(sys.argv[4]),
+              'receipt_found':bool(sys.argv[5]),'sanitized_log_tail':log[-5000:],
+              'credential_value_recorded':False
+          },indent=2)+'\n')
+          PY
+              if [[ $rc -eq 0 && -n "$receipt" ]]; then
+                winner_model="$model"; winner_wire="$wire"; break 2
+              fi
+            done
+          done < "$RUNNER_TEMP/model-candidates.txt"
+
+          if [[ -z "$winner_model" ]]; then
+            echo "winner=false" >> "$GITHUB_OUTPUT"
+            node - <<'NODE'
+          const fs=require('node:fs');
+          fs.writeFileSync('evidence/codex-github-models-matrix/latest.json',JSON.stringify({
+            schema:'akashic.codex-provider-certification-status/v1',status:'FAILED',
+            provider:'github-models',official_codex_binary:true,
+            reason:'No tested model/wire_api combination completed the one-run smoke certification',
+            source_commit:process.env.GITHUB_SHA,credential_value_recorded:false,
+            recorded_at:new Date().toISOString()
+          },null,2)+'\n');
+          NODE
+            exit 0
+          fi
+
+          echo "winner=true" >> "$GITHUB_OUTPUT"
+          echo "model=$winner_model" >> "$GITHUB_OUTPUT"
+          echo "wire=$winner_wire" >> "$GITHUB_OUTPUT"
+          codex_home="$RUNNER_TEMP/codex-winner"
+          rm -rf "$codex_home" "$ROOT/evidence/codex-live-two-turn"
+          mkdir -p "$codex_home"
+          cat > "$codex_home/config.toml" <<EOF
+          model = "$winner_model"
+          model_provider = "github_models"
+
+          [model_providers.github_models]
+          name = "GitHub Models"
+          base_url = "https://models.github.ai/inference"
+          env_key = "GITHUB_MODELS_TOKEN"
+          wire_api = "$winner_wire"
+          EOF
+          CODEX_HOME="$codex_home" AKASHIC_CODEX_LIVE_RUNS=3 npm run test:codex-live >"$MATRIX/full-certification.log" 2>&1
+          rc=$?
+          receipt="$(find "$ROOT/evidence/codex-live-two-turn" -name certification-receipt.json -type f 2>/dev/null | sort | tail -n 1)"
+          if [[ $rc -eq 0 && -n "$receipt" ]]; then
+            cp "$receipt" "$MATRIX/latest.json"
+          else
+            RC="$rc" MODEL="$winner_model" WIRE="$winner_wire" RECEIPT="$receipt" node - <<'NODE'
+          const fs=require('node:fs');
+          fs.writeFileSync('evidence/codex-github-models-matrix/latest.json',JSON.stringify({
+            schema:'akashic.codex-provider-certification-status/v1',status:'FAILED',
+            provider:'github-models',official_codex_binary:true,
+            selected_model:process.env.MODEL,wire_api:process.env.WIRE,
+            exit_code:Number(process.env.RC||1),receipt_found:Boolean(process.env.RECEIPT),
+            reason:'A smoke-compatible provider failed the required three consecutive runs',
+            source_commit:process.env.GITHUB_SHA,credential_value_recorded:false,
+            recorded_at:new Date().toISOString()
+          },null,2)+'\n');
+          NODE
+          fi
+          exit 0
+      - name: Commit non-secret matrix result
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f evidence/codex-github-models-matrix/catalog.json evidence/codex-github-models-matrix/latest.json evidence/codex-github-models-matrix/codex-version.txt evidence/codex-github-models-matrix/npm-version.txt evidence/codex-github-models-matrix/attempts/*.json
+          git add -f evidence/codex-live-two-turn 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "evidence(codex): record GitHub Models compatibility matrix [skip ci]"
+            git push origin HEAD:akashic/v0.10-codex-app-server-live
+          fi
+      - name: Upload complete matrix evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-github-models-matrix-${{ github.sha }}
+          path: |
+            evidence/codex-github-models-matrix
+            evidence/codex-live-two-turn
+          if-no-files-found: error
+          retention-days: 30
+      - name: Enforce PASS
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const result=JSON.parse(fs.readFileSync('evidence/codex-github-models-matrix/latest.json','utf8'));
+          if (result.status !== 'PASS') { console.error(JSON.stringify(result)); process.exit(1); }
+          NODE
