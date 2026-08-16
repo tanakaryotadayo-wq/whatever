@@ -1,0 +1,201 @@
++    if (schema.maxItems !== undefined && value.length > schema.maxItems) {
++      errors.push(`${path} must contain at most ${schema.maxItems} items`);
++    }
++    if (schema.items) value.forEach((item, index) => errors.push(...validateSchema(schema.items, item, `${path}[${index}]`)));
++  }
++  if (typeof value === "string") {
++    if (schema.minLength !== undefined && value.length < schema.minLength) errors.push(`${path} is too short`);
++    if (schema.maxLength !== undefined && value.length > schema.maxLength) errors.push(`${path} is too long`);
++    if (schema.pattern && !(new RegExp(schema.pattern).test(value))) errors.push(`${path} does not match ${schema.pattern}`);
++  }
++  return errors;
++}
++
++function stripCodeFence(text) {
++  const trimmed = text.trim();
++  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
++  return fenced ? fenced[1].trim() : trimmed;
++}
++
++function collectTextCandidates(value, output = [], seen = new Set()) {
++  if (value === null || value === undefined) return output;
++  if (typeof value === "string") {
++    output.push(value);
++    return output;
++  }
++  if (typeof value !== "object" || seen.has(value)) return output;
++  seen.add(value);
++  if (Array.isArray(value)) {
++    for (const child of value) collectTextCandidates(child, output, seen);
++    return output;
++  }
++  const preferredKeys = ["text", "message", "content", "output", "finalOutput", "final_output"];
++  for (const key of preferredKeys) {
++    if (Object.hasOwn(value, key)) collectTextCandidates(value[key], output, seen);
++  }
++  for (const [key, child] of Object.entries(value)) {
++    if (!preferredKeys.includes(key)) collectTextCandidates(child, output, seen);
++  }
++  return output;
++}
++
++export function parseStructuredResultFromEvents(events, schema = TURN_OUTPUT_SCHEMA) {
++  const ordered = [...events].reverse();
++  const errors = [];
++  for (const event of ordered) {
++    if (!["item/completed", "turn/completed"].includes(event.method)) continue;
++    const candidates = collectTextCandidates(event.params ?? {});
++    for (const candidate of candidates.reverse()) {
++      const text = stripCodeFence(candidate);
++      if (!text.startsWith("{") || !text.endsWith("}")) continue;
++      try {
++        const parsed = JSON.parse(text);
++        const validationErrors = validateSchema(schema, parsed);
++        if (validationErrors.length === 0) return { value: parsed, sourceEvent: event };
++        errors.push(...validationErrors);
++      } catch (error) {
++        errors.push(error instanceof Error ? error.message : String(error));
++      }
++    }
++  }
++  throw Object.assign(new Error("no schema-valid structured final assistant result was found"), {
++    code: "STRUCTURED_OUTPUT_MISSING",
++    details: { errors: errors.slice(0, 50) },
++  });
++}
++
++const SECRET_KEY = /authorization|cookie|password|passwd|secret|token|api[-_]?key|credential/i;
++const SECRET_TEXT = /(Bearer\s+[A-Za-z0-9._~+\/-]+=*|sk-(?:proj-)?[A-Za-z0-9_-]{12,}|AKIA[0-9A-Z]{16})/g;
++const SECRET_TEXT_SCAN = /(Bearer\s+[A-Za-z0-9._~+\/-]+=*|sk-(?:proj-)?[A-Za-z0-9_-]{12,}|AKIA[0-9A-Z]{16})/;
++
++export function sanitizeValue(value, depth = 0) {
++  if (depth > 16) return "[REDACTED_DEPTH]";
++  if (value === null || typeof value === "number" || typeof value === "boolean") return value;
++  if (typeof value === "string") return value.replace(SECRET_TEXT, "[REDACTED_SECRET]");
++  if (Array.isArray(value)) return value.slice(0, 10_000).map((item) => sanitizeValue(item, depth + 1));
++  if (typeof value === "object") {
++    const output = {};
++    for (const [key, child] of Object.entries(value)) {
++      output[key] = SECRET_KEY.test(key) ? "[REDACTED_SECRET]" : sanitizeValue(child, depth + 1);
++    }
++    return output;
++  }
++  return String(value);
++}
++
++export function assertNoCredentialLeak(value) {
++  const serialized = JSON.stringify(value);
++  if (SECRET_TEXT_SCAN.test(serialized) || /"(?:authorization|cookie|password|secret|token|api[-_]?key)"\s*:\s*"(?!\[REDACTED_SECRET\])/i.test(serialized)) {
++    throw Object.assign(new Error("credential-like material remained in evidence"), {
++      code: "EVIDENCE_CREDENTIAL_LEAK",
++    });
++  }
++}
++
++export async function artifactRefForFile(path, { workspaceRoot, artifactType = "akashic.codex-output/v1" } = {}) {
++  const absolute = resolve(path);
++  const root = workspaceRoot ? resolve(workspaceRoot) : null;
++  if (root && absolute !== root && !absolute.startsWith(`${root}/`)) {
++    throw Object.assign(new Error("artifact path escaped fixture workspace"), {
++      code: "ARTIFACT_PATH_ESCAPE",
++      details: { absolute, root },
++    });
++  }
++  const info = await stat(absolute);
++  if (!info.isFile()) throw new Error(`artifact is not a regular file: ${absolute}`);
++  const bytes = await readFile(absolute);
++  const hex = sha256Bytes(bytes);
++  return {
++    media_type: "text/plain",
++    digest: `sha256:${hex}`,
++    size: bytes.length,
++    uri: `file://${absolute}`,
++    artifact_type: artifactType,
++  };
++}
+diff --git a/packages/codex-app-server-adapter/test/fixtures/mock-app-server.mjs b/packages/codex-app-server-adapter/test/fixtures/mock-app-server.mjs
+new file mode 100644
+index 0000000..3150fe6
+--- /dev/null
++++ b/packages/codex-app-server-adapter/test/fixtures/mock-app-server.mjs
+@@ -0,0 +1,213 @@
++import { createInterface } from "node:readline";
++import { writeFile } from "node:fs/promises";
++import { join } from "node:path";
++
++const rl = createInterface({ input: process.stdin, crlfDelay: Infinity });
++let initialized = false;
++let modelListAttempts = 0;
++let threadCounter = 0;
++let turnCounter = 0;
++const threads = new Map();
++
++function send(message) {
++  process.stdout.write(`${JSON.stringify(message)}\n`);
++}
++
++function respond(id, result) {
++  send({ id, result });
++}
++
++function respondError(id, code, message, data = undefined) {
++  send({ id, error: data === undefined ? { code, message } : { code, message, data } });
++}
++
++function taskField(text, field) {
++  const pattern = new RegExp(`"${field}"\\s*:\\s*"([^"]+)"`);
++  return text.match(pattern)?.[1] ?? null;
++}
++
++function inputText(params) {
++  return (params?.input ?? []).filter((item) => item.type === "text").map((item) => item.text).join("\n");
++}
++
++function completedItem(threadId, turnId, value) {
++  const item = {
++    id: `item-${turnId}`,
++    type: "agentMessage",
++    text: JSON.stringify(value),
++    phase: "final_answer",
++  };
++  send({ method: "item/started", params: { threadId, turnId, item } });
++  send({ method: "item/completed", params: { threadId, turnId, item } });
++  send({
++    method: "turn/completed",
++    params: {
++      threadId,
++      turn: { id: turnId, status: "completed", items: [item], error: null },
++    },
++  });
++}
++
++async function handle(message) {
++  if (message.method === "initialize") {
++    initialized = true;
++    respond(message.id, {
++      userAgent: "mock-codex-app-server/0.10.0",
++      codexHome: "/tmp/mock-codex-home",
++      platformFamily: "unix",
++      platformOs: process.platform,
++    });
++    return;
++  }
++  if (message.method === "initialized") return;
++  if (!initialized) {
++    if (Object.hasOwn(message, "id")) respondError(message.id, -32002, "Not initialized");
++    return;
++  }
++  if (message.method === "model/list") {
++    modelListAttempts += 1;
++    if (process.env.MOCK_OVERLOAD_MODEL_LIST === "1" && modelListAttempts === 1) {
++      respondError(message.id, -32001, "Server overloaded; retry later.");
++      return;
++    }
++    respond(message.id, {
++      data: [{
++        id: "mock-model",
++        model: "mock-model",
++        displayName: "Mock Model",
++        description: "Deterministic mock",
++        hidden: false,
++        supportedReasoningEfforts: [
