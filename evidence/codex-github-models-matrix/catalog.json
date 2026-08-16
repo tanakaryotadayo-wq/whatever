@@ -1,0 +1,9 @@
+{
+  "schema": "akashic.github-models-catalog/v1",
+  "catalog_count": 0,
+  "candidates": [
+    "openai/gpt-4.1"
+  ],
+  "catalog_error": "HTTPError: HTTP Error 410: Gone",
+  "credential_value_recorded": false
+}

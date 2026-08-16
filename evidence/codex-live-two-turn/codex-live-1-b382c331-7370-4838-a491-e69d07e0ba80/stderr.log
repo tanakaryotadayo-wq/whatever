@@ -1,0 +1,4 @@
+2026-08-16T04:59:15.427561Z ERROR codex_app_server: Invalid configuration; using defaults. <HOME>/work/_temp/codex-openai_gpt-4.1-chat/config.toml:8:12: `wire_api = "chat"` is no longer supported.
+How to fix: set `wire_api = "responses"` in your provider config.
+More info: https://github.com/openai/codex/discussions/7782
+2026-08-16T04:59:15.427614Z ERROR codex_app_server: Codex could not find bubblewrap on PATH. Install bubblewrap with your OS package manager. See the sandbox prerequisites: https://developers.openai.com/codex/concepts/sandboxing#prerequisites. Codex will use the bundled bubblewrap in the meantime.

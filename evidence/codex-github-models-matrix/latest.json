@@ -1,0 +1,10 @@
+{
+  "schema": "akashic.codex-provider-certification-status/v1",
+  "status": "FAILED",
+  "provider": "github-models",
+  "official_codex_binary": true,
+  "reason": "No tested model/wire_api combination completed the one-run smoke certification",
+  "source_commit": "aac8fb767d85f4ecf72f09730092568868f497bc",
+  "credential_value_recorded": false,
+  "recorded_at": "2026-08-16T04:59:15.553Z"
+}
