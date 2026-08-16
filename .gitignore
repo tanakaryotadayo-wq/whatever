@@ -1,0 +1,7 @@
+# Codex App Server live certification outputs
+evidence/codex-live-two-turn/codex-live-*/
+evidence/codex-live-two-turn/certification-receipt.json
+evidence/codex-live-two-turn/codex-version.txt
+evidence/codex-live-two-turn/app-server-help.txt
+evidence/codex-live-two-turn/live-run-summary.jsonl
+packages/codex-app-server-adapter/generated/*/
