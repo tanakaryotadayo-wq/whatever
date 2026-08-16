@@ -1,0 +1,13 @@
+{
+  "name": "@akashic/temporal-runner",
+  "version": "0.7.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"start": "node src/server.js", "test": "node --test test/*.test.mjs"},
+  "dependencies": {
+    "@akashic/contracts": "0.7.0",
+    "@akashic/temporal-workflow": "0.7.0",
+    "@temporalio/client": "1.21.1"
+  },
+  "engines": {"node": ">=20"}
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://akashic.dev/schemas/v1/task-snapshot.schema.json",
+  "type": "object",
+  "required": ["schema", "task_id", "logical_attempt_id", "state", "terminal", "state_seq", "context_seq", "turn_no"],
+  "properties": {
+    "schema": {"const": "akashic.task-snapshot/v1"},
+    "task_id": {"type": ["string", "null"]},
+    "logical_attempt_id": {"type": ["string", "null"]},
+    "state": {"enum": ["SUBMITTED", "COMPILING_CONTEXT", "WORKING", "INPUT_REQUIRED", "VERIFYING", "ADOPTING", "COMPLETED", "FAILED", "CANCELED"]},
+    "terminal": {"type": "boolean"},
+    "state_seq": {"type": "integer", "minimum": 0},
+    "context_seq": {"type": "integer", "minimum": 0},
+    "turn_no": {"type": "integer", "minimum": 0},
+    "context_need": {"type": ["object", "null"]},
+    "candidate_artifact_refs": {"type": "array", "items": {"$ref": "https://akashic.dev/schemas/v1/artifact-ref.schema.json"}},
+    "verification_report_ref": {"oneOf": [{"$ref": "https://akashic.dev/schemas/v1/artifact-ref.schema.json"}, {"type": "null"}]},
+    "provenance_ref": {"oneOf": [{"$ref": "https://akashic.dev/schemas/v1/artifact-ref.schema.json"}, {"type": "null"}]},
+    "adoption_ref": {"oneOf": [{"$ref": "https://akashic.dev/schemas/v1/artifact-ref.schema.json"}, {"type": "null"}]},
+    "error": {"type": ["object", "null"]}
+  }
+}

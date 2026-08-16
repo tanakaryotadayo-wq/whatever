@@ -1,1 +1,0 @@
-Bootstrap payload is a prefix-only ZIP stream. The bootstrap workflow validates every local entry CRC32 and requires exactly 167 entries before promotion.

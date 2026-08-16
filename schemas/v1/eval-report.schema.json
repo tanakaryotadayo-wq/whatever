@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://akashic.dev/schemas/v1/eval-report.schema.json",
+  "title": "AkashicEvalReportV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "dataset_digest", "total", "accepted", "skipped", "passed", "failed", "results", "report_digest"],
+  "properties": {
+    "schema": {"const": "akashic.eval-report/v1"},
+    "dataset_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "total": {"type": "integer", "minimum": 0},
+    "accepted": {"type": "integer", "minimum": 0},
+    "skipped": {"type": "integer", "minimum": 0},
+    "passed": {"type": "integer", "minimum": 0},
+    "failed": {"type": "integer", "minimum": 0},
+    "results": {"type": "array"},
+    "report_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

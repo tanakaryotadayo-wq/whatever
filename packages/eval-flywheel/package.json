@@ -1,0 +1,10 @@
+{
+  "name": "@akashic/eval-flywheel",
+  "version": "0.8.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.js",
+  "scripts": {"test": "node --test test/*.test.mjs"},
+  "dependencies": {"@akashic/contracts": "0.7.0"},
+  "engines": {"node": ">=20"}
+}

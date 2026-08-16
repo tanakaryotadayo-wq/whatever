@@ -1,0 +1,75 @@
+name: Akashic canonical CI
+
+on:
+  pull_request:
+    paths:
+      - '.agents/**'
+      - '.github/workflows/akashic-ci.yml'
+      - 'knowledge/**'
+      - 'plugins/**'
+      - 'packages/**'
+      - 'workflows/**'
+      - 'apps/**'
+      - 'experiments/**'
+      - 'deploy/**'
+      - 'scripts/**'
+      - 'schemas/**'
+      - 'docs/**'
+      - 'runtime/**'
+      - 'recovery/**'
+      - 'package*.json'
+  push:
+    branches:
+      - main
+      - 'akashic/v0.7-canonical-final'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: akashic-canonical-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install exact locked dependency graph
+        run: npm ci
+      - name: Dependency security gate
+        run: npm audit --audit-level=high
+      - name: Workspace doctor
+        run: npm run doctor
+      - name: Schema validation
+        run: npm run test:schemas
+      - name: Knowledge and bake-off contracts
+        run: npm run test:knowledge
+      - name: Core and adapter tests
+        run: npm run test:core
+      - name: Temporal durable P0 integration
+        run: npm run test:p0
+      - name: Vercel gateway regression
+        run: npm run test:gateway
+      - name: Cloudflare conformance regression
+        run: npm run test:cloudflare
+      - name: Build CI evidence manifest
+        env:
+          AKASHIC_CI_COMMIT: ${{ github.sha }}
+          AKASHIC_CI_RUN_ID: ${{ github.run_id }}
+          AKASHIC_CI_RUN_ATTEMPT: ${{ github.run_attempt }}
+          AKASHIC_CI_REF: ${{ github.ref }}
+        run: node scripts/write-ci-evidence.mjs
+      - name: Upload CI evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: akashic-ci-evidence-${{ github.sha }}
+          path: evidence/ci/
+          if-no-files-found: error
+          retention-days: 30

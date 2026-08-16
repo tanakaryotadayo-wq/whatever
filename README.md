@@ -1,40 +1,44 @@
-# whatever
+# Akashic Agent Operating Layer
 
-Build resilient language agents as graphs.
+Akashic decides **who executes what, with which context and authority, and which result is adopted as verified evidence**. It sits above replaceable durable-workflow and Agent runtimes.
 
-## Sovereign Search
+## Authority split
 
-This repository now includes a toolized `sovereign_search.py` surface for AI/CLI orchestration.
+- **GitHub** — source, CI, review and provenance.
+- **Akashic** — routing, ContextNeed/ContextPacketDelta, context compilation, policy, handoff, effect identity, verification and adoption.
+- **Temporal** — current P0 workflow authority and reference implementation.
+- **Vercel Workflows / Cloudflare Workflows** — bounded comparison candidates, never parallel authorities for the same Task.
+- **Drive / R2** — content-addressed artifact, context and evidence storage plus rebuildable projections.
+- **ChatGPT + authenticated MCP** — operator and command surface.
 
-Core files:
+## What is already executable
 
-- `sovereign_search.py` — unified search engine over GitHub, Hugging Face, and Akashic DB.
-- `tools/sovereign_search_tool.py` — zero-MCP JSON CLI wrapper.
-- `tools/sovereign_search_mcp.py` — MCP server wrapper.
-- `.aicli/tools/sovereign_search.yaml` — AICLI tool declaration.
-- `schemas/sovereign_search.openai.tool.json` — OpenAI-style function tool schema.
-- `docs/sovereign_search.md` — usage and orchestration notes.
+- durable `RunAgentTask` with Update-With-Start and CAS-validated context input;
+- one Agent turn per retryable Activity;
+- separate Workflow, Context, Agent and Assurance Task Queues;
+- current Temporal Worker Deployment Versioning with pinned workflow behavior;
+- OCI-style ArtifactRef, effect-generation fencing, provenance and verification-gated adoption;
+- Google Drive immutable artifact/projection/mailbox adapter using official Drive APIs;
+- MCP Tasks projection, policy-as-code, fast/durable routing and session-recovery contracts;
+- evidence-linked JSONL evaluation flywheel;
+- fixed Temporal/Vercel/Cloudflare comparison scenario.
 
-Quick check:
+The 30-packet machine registry lives at `knowledge/packet-registry.json`. Reusable operating discipline lives under `.agents/skills/`.
+
+## Reproduce
 
 ```bash
-python3 tools/sovereign_search_tool.py --query "tauri pty session" --top 5
+npm ci
+npm audit --audit-level=high
+npm run doctor
+npm run test:schemas
+npm run test:knowledge
+npm run test:core
+npm run test:p0
+npm run test:gateway
+npm run test:cloudflare
 ```
 
-Self-test for the original engine:
+## Non-claims
 
-```bash
-python3 sovereign_search.py --self-test
-```
-
-## Operating Doctrine
-
-This repository follows the **cognitive compiler** execution model:
-
-- **Shinon / GPT-5.5 Pro** = cognitive compiler. Compiles tasks using RAG and Sovereign Search.
-- **Sovereign Search** = compiler pass. Discovers public implementations with provenance.
-- **Codex** = subscription-authenticated executor. Executes task capsules in a sandboxed workspace.
-
-Design principle: **強いまま構造で壊れなくする** — do not weaken for safety. Use structural integrity instead.
-
-See [docs/cognitive_compiler.md](docs/cognitive_compiler.md) for the full architecture.
+Fixture and contract success are not provider certification. Authenticated official Codex App Server two-turn, real Drive credentials/folders, authenticated ChatGPT→Vercel mutation and the measured workflow-backend bake-off remain explicit live gates.

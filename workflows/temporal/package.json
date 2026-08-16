@@ -1,0 +1,26 @@
+{
+  "name": "@akashic/temporal-workflow",
+  "version": "0.7.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/shared.js",
+    "./workflows": "./src/workflows.js",
+    "./activities": "./src/activities.js",
+    "./task-queues": "./src/task-queues.js",
+    "./worker-deployment": "./src/worker-deployment.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "test:integration": "node --test test/temporal.integration.test.mjs"
+  },
+  "dependencies": {
+    "@akashic/contracts": "0.7.0",
+    "@temporalio/activity": "1.21.1",
+    "@temporalio/client": "1.21.1",
+    "@temporalio/testing": "1.21.1",
+    "@temporalio/worker": "1.21.1",
+    "@temporalio/workflow": "1.21.1"
+  },
+  "engines": {"node": ">=20"}
+}

@@ -1,0 +1,59 @@
+{
+  "schema": "akashic.asset-ledger/v1",
+  "generated_at": "2026-08-16T09:10:00Z",
+  "canonical_repository": "tanakaryotadayo-wq/whatever",
+  "canonical_branch": "main",
+  "assets": [
+    {
+      "asset_id": "github-original-history",
+      "source": "github",
+      "ref": "main@05c58ed7a81e479d9074823e8a8207816cff3b15",
+      "status": "ADOPT_BASE_HISTORY",
+      "target": "repository history",
+      "reason": "Preserve the original A2A worker, schemas, docs and CI provenance."
+    },
+    {
+      "asset_id": "github-v06-gateway-hardening",
+      "source": "github",
+      "ref": "7eb276effee7b3ea56afbcc0ffdf44363ac4e640",
+      "status": "ADOPTED",
+      "target": "deploy/ and history",
+      "reason": "Vercel gateway plus SSRF/DoS/depth/auth hardening."
+    },
+    {
+      "asset_id": "drive-stateful-v06",
+      "source": "google-drive",
+      "ref": "A2A_stateful_ai_worker_v0_6.zip",
+      "sha256": "4b7a7e0145934b14dc2d90f65d871941911abeffa0513e838fdd9a77962b633c",
+      "status": "ADOPTED_AND_SUPERSEDED",
+      "target": "normal Git source and historical releases",
+      "reason": "Useful Worker/Context semantics were recovered; ZIP is no longer a source authority."
+    },
+    {
+      "asset_id": "drive-stateful-v06-patch",
+      "source": "google-drive",
+      "ref": "A2A_stateful_ai_worker_v0_6.patch",
+      "sha256": "4915ffd1aced0a43bcf6cce5d4073b871a48c81c257b61798ba3848a34676c32",
+      "status": "ADOPTED_AND_SUPERSEDED",
+      "target": "repository history",
+      "reason": "Patch lineage retained; canonical code now lives as ordinary Git files."
+    },
+    {
+      "asset_id": "external-knowledge-packets",
+      "source": "library-and-google-drive",
+      "ref": "akashic_external_knowledge_packets_2026-08-16.json",
+      "sha256": "80d20a23c8015da37f52999178f1da1140ab21f03a7888d743959d439e409db3",
+      "status": "ADOPTED_SELECTIVELY",
+      "target": "knowledge/packet-registry.json and executable packages",
+      "reason": "Each packet has an explicit import/defer/reject decision and concrete target."
+    },
+    {
+      "asset_id": "bootstrap-v07-base64",
+      "source": "github-main-history",
+      "ref": ".bootstrap-v07/ + bootstrap-v07.yml",
+      "status": "REJECT_PERMANENT_KEEP_HISTORY_ONLY",
+      "target": "none",
+      "reason": "Recovery transport solved a one-time access problem but is an anti-pattern for permanent source/deployment."
+    }
+  ]
+}

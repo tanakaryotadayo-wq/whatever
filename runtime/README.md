@@ -1,10 +1,10 @@
 # Runtime configuration boundary
 
-This directory contains non-secret runtime templates only. Live credentials, subscription sessions, TLS keys, Google ADC files, and provider configuration must remain outside Git and be injected by the deployment environment.
+This directory contains non-secret runtime templates only. Live credentials, subscription sessions, TLS keys, Google ADC files and provider configuration remain outside Git and are injected by the deployment environment.
 
 Canonical runtime roles:
 
-- `temporal/`: Workflow Worker and control-server templates.
+- `temporal/`: Workflow/Activity Worker and control-server templates.
 - `gateway/`: Vercel environment contract.
 - `workers/`: self-hosted Codex/Claude/local worker contract.
 - `drive/`: folder-role and acceptance configuration examples.

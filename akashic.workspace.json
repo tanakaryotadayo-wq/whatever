@@ -1,0 +1,13 @@
+{
+  "schema": "akashic.workspace/v1",
+  "name": "Akashic Agent Operating Layer",
+  "source_authority": {"provider": "github", "repository": "tanakaryotadayo-wq/whatever", "default_branch": "main"},
+  "workflow_authority": {"p0_backend": "temporal", "status": "provisional", "comparison_candidates": ["temporal", "vercel-workflows", "cloudflare-workflows"], "decision_harness": "experiments/orchestrator-bakeoff"},
+  "knowledge": {"registry": "knowledge/packet-registry.json", "packet_count": 30, "skills_root": ".agents/skills"},
+  "profiles": {
+    "container": {"purpose": ["contract-tests", "temporal-fixture", "ci", "knowledge-validation"]},
+    "cloud-cleanroom": {"purpose": ["reproducibility", "fault-injection", "orchestrator-bakeoff"]},
+    "provider-certification": {"purpose": ["real-provider-live-tests"], "blocks_core": false}
+  },
+  "commands": {"bootstrap": "npm install", "doctor": "npm run doctor", "test": "npm test", "knowledge": "npm run test:knowledge", "vertical_slice": "npm run test:p0", "codex_live": "npm run test:codex-live"}
+}

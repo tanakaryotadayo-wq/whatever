@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://akashic.dev/schemas/v1/drive-mailbox-envelope.schema.json",
+  "title": "DriveMailboxEnvelopeV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "message_id", "task_id", "lane", "created_at", "payload_ref"],
+  "properties": {
+    "schema": {"const": "akashic.drive-mailbox-envelope/v1"},
+    "message_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "task_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "lane": {"enum": ["inbox", "outbox", "receipts", "dead_letter"]},
+    "created_at": {"type": "string", "format": "date-time"},
+    "producer": {"type": "string", "minLength": 1, "maxLength": 255},
+    "payload_ref": {"$ref": "https://akashic.dev/schemas/v1/artifact-ref.schema.json"},
+    "correlation": {"type": "object", "additionalProperties": {"type": "string", "maxLength": 512}, "maxProperties": 32}
+  }
+}
