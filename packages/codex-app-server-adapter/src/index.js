@@ -17,6 +17,17 @@ export {
   validateStructuredTurnOutput,
 } from "./turn-output.js";
 export {
+  canonicalJson,
+  credentialLeakScanPasses,
+  safeVersion,
+  sanitizeString,
+  sanitizeValue,
+  sha256,
+  writeJson,
+  writeSha256Sums,
+} from "./evidence.js";
+export { assertTurnIdentity, buildTurnOnePrompt, buildTurnTwoPrompt } from "./prompts.js";
+export {
   prepareLiveProtocol,
   runSingleCertification,
   writeCertificationReceipt,
