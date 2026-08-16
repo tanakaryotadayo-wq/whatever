@@ -1,0 +1,56 @@
+-import { tmpdir } from "node:os";
+-import { join } from "node:path";
+-
+-function run(args, input, cwd) {
+-  return new Promise((resolve, reject) => {
+-    const child = spawn("codex", args, { cwd, stdio: ["pipe", "pipe", "pipe"] });
+-    let stdout = "";
+-    let stderr = "";
+-    child.stdout.on("data", (chunk) => { stdout += chunk; });
+-    child.stderr.on("data", (chunk) => { stderr += chunk; });
+-    child.on("error", reject);
+-    child.on("close", (code) => code === 0 ? resolve({ stdout, stderr }) : reject(new Error(`codex exited ${code}: ${stderr.slice(-4000)}`)));
+-    child.stdin.end(input);
+-  });
+-}
+-function events(text) {
+-  return text.split(/\r?\n/).filter(Boolean).map((line) => { try { return JSON.parse(line); } catch { return { raw: line }; } });
+-}
+-function findKey(value, keys) {
+-  if (!value || typeof value !== "object") return null;
+-  for (const [key, child] of Object.entries(value)) {
+-    if (keys.includes(key) && typeof child === "string") return child;
+-    const nested = findKey(child, keys);
+-    if (nested) return nested;
+-  }
+-  return null;
+-}
+-
+-const cwd = await mkdtemp(join(tmpdir(), "akashic-codex-live-"));
+-try {
+-  const firstSchema = {
+-    type: "object", additionalProperties: false, required: ["outcome", "request_id", "missing"],
+-    properties: { outcome: { const: "INPUT_REQUIRED" }, request_id: { type: "string" }, missing: { type: "array", items: { type: "string" }, minItems: 1 } }
+-  };
+-  const finalSchema = {
+-    type: "object", additionalProperties: false, required: ["outcome", "answer", "used_delta_only"],
+-    properties: { outcome: { const: "COMPLETED" }, answer: { type: "string" }, used_delta_only: { const: true } }
+-  };
+-  await writeFile(join(cwd, "first.schema.json"), JSON.stringify(firstSchema));
+-  await writeFile(join(cwd, "final.schema.json"), JSON.stringify(finalSchema));
+-  const turn1 = await run(["exec", "--json", "--sandbox", "workspace-write", "--output-schema", join(cwd, "first.schema.json"), "-"],
+-    "Return INPUT_REQUIRED because the deployment region is missing. Do not guess it.", cwd);
+-  const sessionId = findKey(events(turn1.stdout), ["thread_id", "threadId", "session_id", "sessionId"]);
+-  if (!sessionId) throw new Error("official Codex output did not expose a resumable session/thread id");
+-  if (!turn1.stdout.includes("INPUT_REQUIRED")) throw new Error("turn one did not produce INPUT_REQUIRED");
+-  const turn2 = await run(["exec", "resume", "--json", "--sandbox", "workspace-write", "--output-schema", join(cwd, "final.schema.json"), sessionId, "-"],
+-    "ContextPacketDelta only: deployment_region=asia-northeast1. Complete the task without restating the original capsule.", cwd);
+-  if (!turn2.stdout.includes("COMPLETED") || !turn2.stdout.includes("used_delta_only")) throw new Error("turn two did not complete through delta-only resume");
+-  console.log(JSON.stringify({ status: "PASS", provider: "official-codex-binary", session_id: sessionId, turn_1: "INPUT_REQUIRED", turn_2: "COMPLETED" }));
+-} finally {
+-  await rm(cwd, { recursive: true, force: true });
+-}
++#!/usr/bin/env node
++// Compatibility entry point retained for existing automation. The old
++// `codex exec resume` harness was not an App Server certificate.
++await import("./codex-app-server-live-two-turn.mjs");
