@@ -1,0 +1,114 @@
+name: Hosted Codex App Server certification recorder
+
+on:
+  push:
+    branches:
+      - akashic/v0.10-codex-app-server-live
+    paths:
+      - .github/workflows/codex-hosted-live-selfrecord.yml
+      - packages/codex-app-server-adapter/**
+      - fixtures/codex-live-two-turn/**
+      - scripts/codex-app-server-live-three.mjs
+      - scripts/codex-live-acceptance.sh
+      - package.json
+      - package-lock.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: codex-hosted-recorder-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  record-provider-result:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      AKASHIC_CODEX_LIVE: "1"
+      AKASHIC_CODEX_LIVE_RUNS: "3"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: akashic/v0.10-codex-app-server-live
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install repository graph
+        run: npm ci
+      - name: Run official provider gate or record blocker
+        id: provider
+        shell: bash
+        run: |
+          set +e
+          mkdir -p evidence/codex-hosted-probe
+          if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+            node - <<'NODE'
+          const fs = require('node:fs');
+          fs.writeFileSync('evidence/codex-hosted-probe/latest.json', JSON.stringify({
+            schema: 'akashic.codex-provider-certification-status/v1',
+            status: 'BLOCKED',
+            reason: 'OPENAI_API_KEY repository secret is absent',
+            runner: 'github-hosted-macos-15',
+            source_commit: process.env.GITHUB_SHA,
+            recorded_at: new Date().toISOString()
+          }, null, 2) + '\n');
+          NODE
+            echo "result=blocked" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CODEX_NPM_VERSION="$(npm view @openai/codex version)"
+          npm install --global "@openai/codex@${CODEX_NPM_VERSION}"
+          codex --version | tee evidence/codex-hosted-probe/codex-version.txt
+          printf '%s\n' "$CODEX_NPM_VERSION" > evidence/codex-hosted-probe/npm-version.txt
+          npm run test:codex-live
+          exit_code=$?
+
+          receipt="$(find evidence/codex-live-two-turn -name certification-receipt.json -type f -print 2>/dev/null | sort | tail -n 1)"
+          if [[ $exit_code -eq 0 && -n "$receipt" ]]; then
+            cp "$receipt" evidence/codex-hosted-probe/latest.json
+            echo "result=pass" >> "$GITHUB_OUTPUT"
+          else
+            CODEX_EXIT_CODE="$exit_code" CODEX_RECEIPT="$receipt" node - <<'NODE'
+          const fs = require('node:fs');
+          fs.writeFileSync('evidence/codex-hosted-probe/latest.json', JSON.stringify({
+            schema: 'akashic.codex-provider-certification-status/v1',
+            status: 'FAILED',
+            reason: 'official Codex App Server certification did not produce a valid receipt',
+            exit_code: Number(process.env.CODEX_EXIT_CODE || 1),
+            receipt_found: Boolean(process.env.CODEX_RECEIPT),
+            runner: 'github-hosted-macos-15',
+            source_commit: process.env.GITHUB_SHA,
+            recorded_at: new Date().toISOString()
+          }, null, 2) + '\n');
+          NODE
+            echo "result=failed" >> "$GITHUB_OUTPUT"
+          fi
+          exit 0
+      - name: Commit non-secret provider status
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add evidence/codex-hosted-probe/latest.json
+          git add -f evidence/codex-hosted-probe/codex-version.txt evidence/codex-hosted-probe/npm-version.txt 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No provider-status change"
+          else
+            git commit -m "evidence(codex): record hosted provider certification status [skip ci]"
+            git push origin HEAD:akashic/v0.10-codex-app-server-live
+          fi
+      - name: Upload full provider evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-hosted-recorder-${{ github.sha }}
+          path: |
+            evidence/codex-hosted-probe
+            evidence/codex-live-two-turn
+          if-no-files-found: error
+          retention-days: 30
