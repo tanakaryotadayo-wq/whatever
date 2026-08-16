@@ -1,0 +1,15 @@
+{
+  "schema": "akashic.codex-mode-bootstrap-manifest/v1",
+  "files": [
+    {
+      "name": "CODEX_MODE.md",
+      "sha256": "5c6781945669a66f4cb685b6d6359bdfd74ac6de5da40739b0cfbc3785862972",
+      "bytes": 9955
+    },
+    {
+      "name": "00 - CODEX_MODE_POINTER.md",
+      "sha256": "5de021c5a1d81e20ea9baa21432d5c8436732fdecb223049cdf8918829f8cdca",
+      "bytes": 1668
+    }
+  ]
+}
