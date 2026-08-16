@@ -1,0 +1,161 @@
++    assertDeltaOnlyTurn({ turnTwoPrompt, task, turnOnePrompt });
++
++    const turnTwo = await adapter.runTurn({
++      threadId,
++      inputText: turnTwoPrompt,
++      outputSchema: TURN_OUTPUT_SCHEMA,
++      selection,
++    });
++    const turnTwoParsed = parseStructuredResultFromEvents(turnTwo.events).value;
++    const completionChecks = assertCompletedResult(turnTwoParsed);
++
++    const resultPath = join(workspace, "result.txt");
++    if (!(await exists(resultPath))) throw codedError("RESULT_FILE_MISSING", "result.txt was not created");
++    const resultBytes = await readFile(resultPath);
++    if (!resultBytes.equals(expectedBytes)) {
++      throw codedError("RESULT_BYTES_MISMATCH", "result.txt did not match expected bytes", {
++        expected_sha256: `sha256:${sha256Bytes(expectedBytes)}`,
++        actual_sha256: `sha256:${sha256Bytes(resultBytes)}`,
++        expected_size: expectedBytes.length,
++        actual_size: resultBytes.length,
++      });
++    }
++    const artifactRef = await artifactRefForFile(resultPath, { workspaceRoot: workspace });
++
++    const trace = adapter.transport.snapshotTrace(traceStart);
++    const events = adapter.collector.snapshot(eventStart);
++    const methods = requestMethods(trace);
++    const turnOneEventChecks = turnEventChecks(turnOne);
++    const turnTwoEventChecks = turnEventChecks(turnTwo);
++    const serverRequestViolations = adapter.serverRequestViolations.slice(violationStart);
++    const checks = {
++      official_app_server_protocol: true,
++      thread_start_count_exactly_one: count(methods, "thread/start") === 1,
++      turn_start_count_exactly_two: count(methods, "turn/start") === 2,
++      same_thread: turnOne.threadId === threadId && turnTwo.threadId === threadId,
++      distinct_turn_ids: turnOne.turnId !== turnTwo.turnId,
++      turn_one_input_required: turnOneParsed.outcome === "INPUT_REQUIRED",
++      context_need_exact: Object.values(contextChecks).every(Boolean),
++      task_capsule_resent_on_turn_2: false,
++      turn_two_completed: turnTwoParsed.outcome === "COMPLETED",
++      completion_contract: Object.values(completionChecks).every(Boolean),
++      exact_result_bytes: resultBytes.equals(expectedBytes),
++      artifact_digest_matches: artifactRef.digest === `sha256:${sha256Bytes(resultBytes)}`,
++      artifact_size_matches: artifactRef.size === resultBytes.length,
++      no_server_requests: serverRequestViolations.length === 0,
++      turn_one_events: Object.values(turnOneEventChecks).every(Boolean),
++      turn_two_events: Object.values(turnTwoEventChecks).every(Boolean),
++    };
++    if (!Object.entries(checks).filter(([key]) => key !== "task_capsule_resent_on_turn_2").every(([, value]) => value === true)) {
++      throw codedError("CERTIFICATION_CHECK_FAILED", "one or more attempt checks failed", { checks });
++    }
++
++    const sanitizedTrace = sanitizeValue(trace);
++    const sanitizedEvents = sanitizeValue(events);
++    const sanitizedStderr = sanitizeValue(adapter.transport.snapshotStderr());
++    assertNoCredentialLeak(sanitizedTrace);
++    assertNoCredentialLeak(sanitizedEvents);
++    assertNoCredentialLeak(sanitizedStderr);
++
++    await mkdir(runEvidenceDir, { recursive: true });
++    await writeJsonl(join(runEvidenceDir, "sanitized-protocol.jsonl"), sanitizedTrace);
++    await writeJson(join(runEvidenceDir, "requests.json"), sanitizeValue(trace.filter((entry) => entry.direction === "outbound")));
++    await writeJson(join(runEvidenceDir, "events.json"), sanitizedEvents);
++    await writeJson(join(runEvidenceDir, "turn-1-result.json"), turnOneParsed);
++    await writeJson(join(runEvidenceDir, "context-delta.json"), delta);
++    await writeJson(join(runEvidenceDir, "turn-2-result.json"), turnTwoParsed);
++    await writeJson(join(runEvidenceDir, "artifact-manifest.json"), {
++      schema: "akashic.artifact-manifest/v1",
++      artifact_refs: [artifactRef],
++      expected_sha256: `sha256:${sha256Bytes(expectedBytes)}`,
++      expected_size: expectedBytes.length,
++      exact_bytes: true,
++    });
++    await writeJson(join(runEvidenceDir, "stderr.json"), sanitizedStderr);
++
++    const completedAt = new Date().toISOString();
++    const manifest = {
++      schema: "akashic.codex-live-two-turn-evidence/v1",
++      status: "PASS",
++      source_commit: sourceCommit,
++      codex_version: codexVersion,
++      protocol_schema_sha256: protocolManifest.protocol_schema_sha256,
++      model: selection.model,
++      reasoning_effort: selection.effort,
++      service_tier: selection.service_tier,
++      task_id: task.task_id,
++      context_id: task.context_id,
++      logical_attempt_id: task.logical_attempt_id,
++      thread_id: threadId,
++      turn_1_id: turnOne.turnId,
++      turn_2_id: turnTwo.turnId,
++      thread_start_count: count(methods, "thread/start"),
++      turn_start_count: count(methods, "turn/start"),
++      turn_1_status: turnOne.completed.params?.turn?.status,
++      turn_1_outcome: turnOneParsed.outcome,
++      turn_2_status: turnTwo.completed.params?.turn?.status,
++      turn_2_outcome: turnTwoParsed.outcome,
++      context_seq_before: 0,
++      context_seq_after: 1,
++      task_capsule_resent_on_turn_2: false,
++      artifact_refs: [artifactRef],
++      event_counts: adapter.collector.counts(events),
++      checks,
++      started_at: startedAt,
++      completed_at: completedAt,
++    };
++    await writeJson(join(runEvidenceDir, "manifest.json"), manifest);
++    const hashes = await hashEvidenceFiles(runEvidenceDir);
++    await writeJson(join(runEvidenceDir, "sha256sums.json"), hashes);
++    return { runId, runEvidenceDir, manifest, hashes };
++  } catch (error) {
++    await mkdir(runEvidenceDir, { recursive: true });
++    const failure = sanitizeValue({
++      schema: "akashic.codex-live-two-turn-failure/v1",
++      status: "FAILED",
++      source_commit: sourceCommit,
++      codex_version: codexVersion,
++      attempt,
++      task_id: task.task_id,
++      context_id: task.context_id,
++      logical_attempt_id: task.logical_attempt_id,
++      error: {
++        code: error?.code ?? error?.name ?? "UNKNOWN",
++        message: error instanceof Error ? error.message : String(error),
++        details: error?.details ?? null,
++      },
++      trace: adapter.transport.snapshotTrace(traceStart),
++      events: adapter.collector.snapshot(eventStart),
++      server_requests: adapter.serverRequestViolations.slice(violationStart),
++      started_at: startedAt,
++      failed_at: new Date().toISOString(),
++    });
++    assertNoCredentialLeak(failure);
++    await writeJson(join(runEvidenceDir, "failure-receipt.json"), failure);
++    const hashes = await hashEvidenceFiles(runEvidenceDir);
++    await writeJson(join(runEvidenceDir, "sha256sums.json"), hashes);
++    throw error;
++  } finally {
++    await rm(workspace, { recursive: true, force: true });
++  }
++}
++
++export async function runLiveTwoTurnCertification({
++  repoRoot = DEFAULT_REPO_ROOT,
++  codexBin = process.env.CODEX_BIN ?? "codex",
++  runs = Number(process.env.AKASHIC_CODEX_LIVE_RUNS ?? 3),
++  evidenceRoot = null,
++  generatedRoot = null,
++  fixtureRoot = null,
++  sourceCommit = process.env.AKASHIC_SOURCE_COMMIT ?? null,
++  requestedModel = process.env.AKASHIC_CODEX_MODEL ?? null,
++  requestedEffort = process.env.AKASHIC_CODEX_REASONING_EFFORT ?? null,
++  requestedServiceTier = process.env.AKASHIC_CODEX_SERVICE_TIER ?? null,
++  adapterFactory = null,
++  skipBinaryPreparation = false,
++  codexVersionOverride = null,
++  protocolManifestOverride = null,
++} = {}) {
++  if (!Number.isSafeInteger(runs) || runs < 1) throw new TypeError("runs must be a positive integer");
++  const root = resolve(repoRoot);
++  const actualFixtureRoot = resolve(fixtureRoot ?? join(root, "fixtures", "codex-live-two-turn"));
