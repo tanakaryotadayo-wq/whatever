@@ -1,0 +1,1 @@
+Trigger hosted Codex provider certification after credential-bridge evaluation. No secret value is stored here.
