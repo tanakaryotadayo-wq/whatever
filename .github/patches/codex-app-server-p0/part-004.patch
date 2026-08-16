@@ -1,0 +1,211 @@
++  const actualEvidenceRoot = resolve(evidenceRoot ?? join(root, "evidence", "codex-live-two-turn"));
++  await mkdir(actualEvidenceRoot, { recursive: true });
++
++  let codexVersion = codexVersionOverride;
++  let protocolManifest = protocolManifestOverride;
++  if (!skipBinaryPreparation) {
++    codexVersion = await discoverCodexVersion(codexBin);
++    const schemaRoot = resolve(generatedRoot ?? join(
++      root,
++      "packages",
++      "codex-app-server-adapter",
++      "generated",
++      safeVersionSegment(codexVersion),
++      "schema",
++    ));
++    await generateProtocolSchema({ codexBin, outDir: schemaRoot, cwd: root });
++    protocolManifest = await writeProtocolManifest({
++      root: schemaRoot,
++      codexVersion,
++      generationCommand: `${basename(codexBin)} app-server generate-json-schema --out ${relative(root, schemaRoot)}`,
++      sourceCommit,
++    });
++  }
++  if (!codexVersion || !protocolManifest?.protocol_schema_sha256) {
++    throw codedError("BINARY_PREPARATION_MISSING", "codex version and protocol manifest are required");
++  }
++
++  const adapter = adapterFactory
++    ? await adapterFactory()
++    : new CodexAppServerAdapter({ codexBin });
++  const aggregateStartedAt = new Date().toISOString();
++  const attempts = [];
++  try {
++    await adapter.start();
++    const selection = adapter.selectModel({ requestedModel, requestedEffort, requestedServiceTier });
++    for (let attempt = 1; attempt <= runs; attempt += 1) {
++      attempts.push(await certifyAttempt({
++        adapter,
++        attempt,
++        selection,
++        codexVersion,
++        protocolManifest,
++        fixtureRoot: actualFixtureRoot,
++        evidenceRoot: actualEvidenceRoot,
++        sourceCommit,
++      }));
++    }
++
++    const sameVersion = attempts.every((attempt) => attempt.manifest.codex_version === codexVersion);
++    const consecutivePasses = attempts.length === runs && attempts.every((attempt) => attempt.manifest.status === "PASS");
++    const receipt = {
++      schema: "akashic.codex-app-server-certification-receipt/v1",
++      status: sameVersion && consecutivePasses ? "CERTIFIED" : "FAILED",
++      source_commit: sourceCommit,
++      codex_version: codexVersion,
++      protocol_schema_sha256: protocolManifest.protocol_schema_sha256,
++      model: selection.model,
++      reasoning_effort: selection.effort,
++      service_tier: selection.service_tier,
++      required_consecutive_passes: runs,
++      observed_consecutive_passes: attempts.length,
++      same_codex_version: sameVersion,
++      all_passed: consecutivePasses,
++      run_refs: attempts.map((attempt) => ({
++        run_id: attempt.runId,
++        manifest: relative(actualEvidenceRoot, join(attempt.runEvidenceDir, "manifest.json")),
++        manifest_sha256: attempt.hashes["manifest.json"]?.sha256 ?? null,
++      })),
++      boundaries: {
++        proves: [
++          "official codex app-server JSONL stdio handshake",
++          "model/list validated selection",
++          "one thread/start and two turn/start calls per attempt",
++          "same-thread INPUT_REQUIRED to delta-only COMPLETED",
++          "turn/started and turn/completed authority",
++          "exact artifact bytes and digest",
++          "fail-closed approval and elicitation boundary",
++        ],
++        does_not_prove: [
++          "app-server restart and thread/resume",
++          "Temporal or Vercel production Activity integration",
++          "Google Drive artifact publication",
++          "multi-agent routing",
++        ],
++      },
++      started_at: aggregateStartedAt,
++      completed_at: new Date().toISOString(),
++    };
++    assertNoCredentialLeak(receipt);
++    await writeJson(join(actualEvidenceRoot, "certification-receipt.json"), receipt);
++    if (receipt.status !== "CERTIFIED") {
++      throw codedError("CERTIFICATION_INCOMPLETE", "required consecutive live passes were not achieved", { receipt });
++    }
++    return receipt;
++  } catch (error) {
++    const failure = sanitizeValue({
++      schema: "akashic.codex-app-server-certification-failure/v1",
++      status: "FAILED",
++      source_commit: sourceCommit,
++      codex_version: codexVersion,
++      protocol_schema_sha256: protocolManifest?.protocol_schema_sha256 ?? null,
++      completed_attempts: attempts.map((attempt) => attempt.runId),
++      error: {
++        code: error?.code ?? error?.name ?? "UNKNOWN",
++        message: error instanceof Error ? error.message : String(error),
++        details: error?.details ?? null,
++      },
++      started_at: aggregateStartedAt,
++      failed_at: new Date().toISOString(),
++    });
++    assertNoCredentialLeak(failure);
++    await writeJson(join(actualEvidenceRoot, "certification-failure.json"), failure);
++    throw error;
++  } finally {
++    await adapter.stop().catch(() => {});
++  }
++}
+diff --git a/packages/codex-app-server-adapter/src/client.js b/packages/codex-app-server-adapter/src/client.js
+new file mode 100644
+index 0000000..84251e4
+--- /dev/null
++++ b/packages/codex-app-server-adapter/src/client.js
+@@ -0,0 +1,240 @@
++import { EventCollector } from "./event-collector.js";
++import { CodexAppServerProcess } from "./process-manager.js";
++
++function codedError(code, message, details = {}) {
++  return Object.assign(new Error(message), { code, details });
++}
++
++function textInput(text) {
++  return { type: "text", text, textElements: [] };
++}
++
++function normalizeEffortOption(option) {
++  return option?.reasoningEffort ?? option?.reasoning_effort ?? option;
++}
++
++function modelName(model) {
++  return model?.model ?? model?.id ?? null;
++}
++
++function isTerminalStatus(status) {
++  return ["completed", "interrupted", "failed"].includes(String(status ?? "").toLowerCase());
++}
++
++export class CodexAppServerAdapter {
++  constructor({
++    processManager = null,
++    codexBin = "codex",
++    processArgs = ["app-server", "--stdio"],
++    processCwd = undefined,
++    processEnv = {},
++    clientInfo = {
++      name: "akashic_agent_operating_layer",
++      title: "Akashic Agent Operating Layer",
++      version: "0.10.0",
++    },
++    turnTimeoutMs = 600_000,
++    interruptGraceMs = 30_000,
++  } = {}) {
++    this.processManager = processManager ?? new CodexAppServerProcess({
++      command: codexBin,
++      args: processArgs,
++      cwd: processCwd,
++      env: processEnv,
++    });
++    this.clientInfo = clientInfo;
++    this.turnTimeoutMs = turnTimeoutMs;
++    this.interruptGraceMs = interruptGraceMs;
++    this.collector = null;
++    this.initializeResult = null;
++    this.models = [];
++    this.serverRequestViolations = [];
++    this.started = false;
++  }
++
++  get transport() {
++    if (!this.processManager.transport) throw codedError("NOT_STARTED", "adapter is not started");
++    return this.processManager.transport;
++  }
++
++  async start() {
++    if (this.started) return this;
++    await this.processManager.start();
++    this.collector = new EventCollector(this.transport);
++    this.transport.on("serverRequest", (request) => {
++      const violation = {
++        at: new Date().toISOString(),
++        id: request.id,
++        method: request.method,
++        params: request.params ?? {},
++      };
++      this.serverRequestViolations.push(violation);
++      this.transport.respondError(request.id, {
++        code: -32000,
++        message: "Akashic live certification denies all server-initiated approval and elicitation requests",
++        data: { failClosed: true, method: request.method },
++      });
++    });
++
++    this.initializeResult = await this.transport.request("initialize", {
++      clientInfo: this.clientInfo,
++      capabilities: { experimentalApi: false },
++    });
++    this.transport.notify("initialized");
++    this.models = await this.listModels();
++    this.started = true;
++    return this;
++  }
++
