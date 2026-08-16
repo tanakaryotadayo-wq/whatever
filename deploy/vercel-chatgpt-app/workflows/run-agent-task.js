@@ -78,6 +78,21 @@ export function applyContextDeltaToVercelSnapshot(snapshot, delta) {
   };
 }
 
+export function beginAgentTurn(snapshot) {
+  if (TERMINAL_STATES.has(snapshot.state)) return clone(snapshot);
+  const turnNo = snapshot.turn_no + 1;
+  if (snapshot.state === "WORKING") {
+    return {
+      ...clone(snapshot),
+      state: "WORKING",
+      terminal: false,
+      state_seq: snapshot.state_seq + 1,
+      turn_no: turnNo,
+    };
+  }
+  return transitionVercelSnapshot(snapshot, "WORKING", { turn_no: turnNo });
+}
+
 async function emitProjectionStep(event) {
   "use step";
   const writer = getWritable().getWriter();
@@ -363,10 +378,8 @@ export async function runAgentTaskOnVercel(taskInput) {
       };
 
       for (;;) {
-        const turnNo = snapshot.turn_no + 1;
-        snapshot = transitionVercelSnapshot(snapshot, "WORKING", {
-          turn_no: turnNo,
-        });
+        snapshot = beginAgentTurn(snapshot);
+        const turnNo = snapshot.turn_no;
         await emitProjectionStep(snapshotProjection(snapshot));
 
         const output = await runAgentTurnStep({
