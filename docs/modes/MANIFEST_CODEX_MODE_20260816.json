@@ -1,15 +1,78 @@
 {
-  "schema": "akashic.codex-mode-bootstrap-manifest/v1",
+  "schema": "akashic.codex-mode-manifest/v1.2",
+  "mode_id": "codex-mode",
+  "mode_version": "1.2.0",
+  "digest_algorithm": "sha256",
   "files": [
     {
-      "name": "CODEX_MODE.md",
-      "sha256": "5c6781945669a66f4cb685b6d6359bdfd74ac6de5da40739b0cfbc3785862972",
-      "bytes": 9955
+      "path": "docs/modes/CODEX_MODE.md",
+      "sha256": "4ea4fa840dfba896d53dffc3aa10add5114fd061e37790cd96b53077c424a1db",
+      "bytes": 10089
     },
     {
-      "name": "00 - CODEX_MODE_POINTER.md",
-      "sha256": "5de021c5a1d81e20ea9baa21432d5c8436732fdecb223049cdf8918829f8cdca",
-      "bytes": 1668
+      "path": "docs/modes/CODEX_MODE_POINTER.md",
+      "sha256": "d703ad6811cdacdf50d64e7bdf261215864ca355a3cdcdb69dd5a2d1cc44f6e9",
+      "bytes": 2028
+    },
+    {
+      "path": "docs/modes/CODEX_MODE_STATE.json",
+      "sha256": "f64e038339c79544d17014d6e845e982df553794c66ce133d7f9c2b652975bd2",
+      "bytes": 7788
+    },
+    {
+      "path": "docs/modes/CODEX_MODE_HANDOFF.json",
+      "sha256": "636ebab6441bea13dc92dbe43e5c41cce6ea5ea24f5024dfd984dfaa13e4946a",
+      "bytes": 4849
+    },
+    {
+      "path": "schemas/v1/codex-mode-state.schema.json",
+      "sha256": "649f0492c974c9bcbe737da4d9bb411ba4d8da330080b549def340aff1da8d7e",
+      "bytes": 5252
+    },
+    {
+      "path": "schemas/v1/codex-mode-handoff.schema.json",
+      "sha256": "faf583de5f6d4d18568c2e63fa73248387263609473536546cf63145084a7241",
+      "bytes": 2901
+    },
+    {
+      "path": "scripts/validate-codex-mode.mjs",
+      "sha256": "b69db55e34080b379c2300387e60a6881a2853e054c1ba4e5c508354c685fd52",
+      "bytes": 5775
+    },
+    {
+      "path": "scripts/codex-mode-status.mjs",
+      "sha256": "94f74fbd79b295fcdaa6c75dd890dec7cb22173fff2ea3b594f8f1fdb1e52446",
+      "bytes": 1549
+    },
+    {
+      "path": ".agents/skills/codex-mode/SKILL.md",
+      "sha256": "28483839790006352ac0b85b16b778830d887b6c86fee962ebc1475d54dcbf74",
+      "bytes": 2126
+    },
+    {
+      "path": ".github/agents/codex-mode.agent.md",
+      "sha256": "ad65cacfc65474e3c28490d95a35757ed742ad9a26ba69f2bd5e172afea96778",
+      "bytes": 1192
+    },
+    {
+      "path": "docs/ADR-0012-CODEX-MODE-UX.md",
+      "sha256": "9113ec637ae071b513f6a7095057de3f4494468992c4dedad26da857cdbaad82",
+      "bytes": 3230
+    },
+    {
+      "path": "docs/ADR-0013-CODEX-MODE-HANDOFF-STATE-INTEGRITY.md",
+      "sha256": "a15dc5ae8ddaf414212084086629ebb427f15464f009a15aa00301cff51c4f1a",
+      "bytes": 2882
+    },
+    {
+      "path": "docs/AUDIT-2026-08-16.md",
+      "sha256": "48779801933c72d39e87428c4e7e46bdb396d0d833ea9258e754aace47e1734f",
+      "bytes": 3525
+    },
+    {
+      "path": "docs/AUDIT-2026-08-16.json",
+      "sha256": "c35ac496e9e49c4117b56df99e3e93e64bf3fc2e875d25fcfd3be792e32b71ae",
+      "bytes": 2549
     }
   ]
 }
