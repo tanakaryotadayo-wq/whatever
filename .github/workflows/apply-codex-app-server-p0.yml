@@ -1,0 +1,74 @@
+name: Apply Codex App Server P0 source
+
+on:
+  push:
+    branches:
+      - akashic/p0-codex-app-server-live-two-turn
+    paths:
+      - .github/patches/codex-app-server-p0/**
+      - .github/workflows/apply-codex-app-server-p0.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-codex-app-server-p0-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message || '', '[codex-p0-ready]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: akashic/p0-codex-app-server-live-two-turn
+          fetch-depth: 1
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Reassemble and verify atomic source patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .github/patches/codex-app-server-p0/part-*.patch > /tmp/codex-app-server-p0.patch
+          echo '446e202dd2d4fd5b4b8582eb599b76b66ec08d48ffd29290acfe2aedcc751336  /tmp/codex-app-server-p0.patch' | sha256sum -c -
+          git apply --check /tmp/codex-app-server-p0.patch
+          git apply /tmp/codex-app-server-p0.patch
+          git diff --check
+      - name: Regenerate exact workspace lockfile
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Install exact dependency graph
+        run: npm ci
+      - name: Dependency security gate
+        run: npm audit --audit-level=high
+      - name: Workspace and schema validation
+        run: |
+          npm run doctor
+          npm run test:schemas
+          npm run test:knowledge
+      - name: Core and adapter tests
+        run: npm run test:core
+      - name: Temporal durable P0 regression
+        run: npm run test:p0
+      - name: Vercel gateway regression
+        env:
+          WORKFLOW_TARGET_WORLD: local
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: npm run build:gateway
+      - name: Cloudflare conformance regression
+        run: npm run test:cloudflare
+      - name: Commit validated source and remove bootstrap material
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .github/patches/codex-app-server-p0
+          rm -f .github/workflows/apply-codex-app-server-p0.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'feat(codex): add official App Server live two-turn certification [codex-p0-ready]'
+          git push origin HEAD:akashic/p0-codex-app-server-live-two-turn
