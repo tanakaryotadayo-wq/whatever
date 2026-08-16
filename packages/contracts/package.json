@@ -3,7 +3,14 @@
   "version": "0.7.0",
   "private": true,
   "type": "module",
-  "exports": "./src/index.js",
-  "scripts": {"test": "node --test test/*.test.mjs"},
-  "engines": {"node": ">=20"}
+  "exports": {
+    ".": "./src/index.js",
+    "./task-state": "./src/task-state.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
 }

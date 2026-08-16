@@ -1,0 +1,54 @@
+{
+  "schema": "akashic.external-adoption-policy/v1",
+  "policy_id": "external-first-v1",
+  "effective_at": "2026-08-16T00:00:00Z",
+  "priority_order": [
+    "OFFICIAL_STANDARD",
+    "OFFICIAL_IMPLEMENTATION",
+    "OFFICIAL_SAMPLE",
+    "MATURE_OSS",
+    "COMMUNITY_PATTERN",
+    "CUSTOM_IMPLEMENTATION"
+  ],
+  "rules": {
+    "search_before_build": true,
+    "prefer_pattern_import_over_dependency": true,
+    "one_authority_per_responsibility": true,
+    "require_source_revision": true,
+    "require_license_for_dependency": true,
+    "require_conformance_tests": true,
+    "require_rollback_or_rejection_path": true,
+    "require_provenance_receipt": true,
+    "experimental_dependency_default": "FORBID",
+    "replace_custom_code_only_after_equivalence": true
+  },
+  "adoption_states": [
+    "DISCOVERED",
+    "VERIFIED_SOURCE",
+    "ADAPTED",
+    "CONFORMANCE_PASS",
+    "ADOPTED",
+    "REJECTED",
+    "DEFERRED"
+  ],
+  "import_modes": [
+    "STANDARD_CONTRACT",
+    "PATTERN_ONLY",
+    "PINNED_DEPENDENCY",
+    "REFERENCE_IMPLEMENTATION",
+    "BOUNDED_EXPERIMENT"
+  ],
+  "required_receipt_fields": [
+    "receipt_id",
+    "packet_ids",
+    "problem",
+    "sources",
+    "import_mode",
+    "decision",
+    "implementation_paths",
+    "conformance_tests",
+    "replaced_or_avoided_custom_code",
+    "risks",
+    "rollback"
+  ]
+}

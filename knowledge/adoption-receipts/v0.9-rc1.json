@@ -1,0 +1,53 @@
+{
+  "schema": "akashic.external-adoption-receipt-set/v1",
+  "release_candidate": "v0.9.0-rc1",
+  "created_at": "2026-08-16T00:00:00Z",
+  "receipts": [
+    {
+      "receipt_id": "adapt-kpk-026-vercel-workflow-4.6.0",
+      "packet_ids": ["KPK-026"],
+      "problem": "Run the backend-neutral RunAgentTask contract on Vercel without rebuilding checkpointing, retries, external input waits, cancellation, or deployment version retention.",
+      "sources": [
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://github.com/vercel/workflow/tree/workflow@4.6.0",
+          "revision": "822197c886e0b98bd1e99f01544a9685104cd9bd",
+          "experimental": false
+        },
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://vercel.com/workflows",
+          "revision": "retrieved-2026-08-16",
+          "experimental": false
+        }
+      ],
+      "import_mode": "PINNED_DEPENDENCY",
+      "decision": "ADAPTED",
+      "license": "Apache-2.0",
+      "pinned_version": "workflow@4.6.0",
+      "implementation_paths": [
+        "deploy/vercel-chatgpt-app/workflows/run-agent-task.js",
+        "deploy/vercel-chatgpt-app/lib/vercel-workflow-backend.js",
+        "deploy/vercel-chatgpt-app/app/api/workflows/tasks",
+        "deploy/vercel-chatgpt-app/app/api/mcp/route.js"
+      ],
+      "conformance_tests": [
+        "deploy/vercel-chatgpt-app/tests/vercel-workflow-contracts.test.mjs",
+        "deploy/vercel-chatgpt-app/tests/gateway-utils.test.mjs",
+        ".github/workflows/akashic-ci.yml"
+      ],
+      "replaced_or_avoided_custom_code": [
+        "Custom checkpoint and restart engine",
+        "Custom retry scheduler",
+        "Public token-only webhook input",
+        "A second authoritative TaskStore"
+      ],
+      "risks": [
+        "workflow@4.6.0 only coordinates duplicate starts while the deterministic owner hook is active; post-terminal task-id dedup remains an explicit bake-off gap.",
+        "The fixture Agent and artifact references are contract evidence, not official Codex or production artifact-store evidence.",
+        "Vercel live restart, cancellation, and deployment-rollout fault evidence is still required before backend selection."
+      ],
+      "rollback": "Remove the Vercel Workflow routes, workflow definition, and pinned dependency; keep the backend-neutral contracts and Temporal reference implementation unchanged."
+    }
+  ]
+}
