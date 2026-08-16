@@ -1,0 +1,90 @@
+{
+  "schema": "akashic.external-adoption-receipt-set/v1",
+  "receipts": [
+    {
+      "receipt_id": "codex-mode-ux-v1.2",
+      "packet_ids": ["KPK-001", "KPK-013", "KPK-019", "KPK-022"],
+      "problem": "Codex Mode still had self-referential state, a stale bootstrap manifest, and an implicit coordinator-to-executor handoff.",
+      "sources": [
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://docs.github.com/en/copilot/how-tos/github-copilot-app/customize-github-copilot-app",
+          "revision": "accessed-2026-08-16",
+          "experimental": false
+        },
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://docs.github.com/en/copilot/how-tos/copilot-sdk/features/custom-agents",
+          "revision": "accessed-2026-08-16",
+          "experimental": false
+        },
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://docs.github.com/en/copilot/concepts/agents/about-agent-skills",
+          "revision": "accessed-2026-08-16",
+          "experimental": false
+        },
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://code.claude.com/docs/en/sub-agents",
+          "revision": "accessed-2026-08-16",
+          "experimental": false
+        },
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://docs.replit.com/core-concepts/agent/task-system",
+          "revision": "accessed-2026-08-16",
+          "experimental": false
+        },
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://help.openai.com/en/articles/20001066",
+          "revision": "accessed-2026-08-16",
+          "experimental": false
+        },
+        {
+          "class": "OFFICIAL_IMPLEMENTATION",
+          "url": "https://help.openai.com/en/articles/20001256-plugins-in-codexOpenAI",
+          "revision": "accessed-2026-08-16",
+          "experimental": false
+        }
+      ],
+      "import_mode": "PATTERN_ONLY",
+      "decision": "ADAPTED",
+      "implementation_paths": [
+        "docs/modes/CODEX_MODE.md",
+        "docs/modes/CODEX_MODE_POINTER.md",
+        "docs/modes/CODEX_MODE_STATE.json",
+        "docs/modes/CODEX_MODE_HANDOFF.json",
+        "docs/modes/MANIFEST_CODEX_MODE_20260816.json",
+        "schemas/v1/codex-mode-state.schema.json",
+        "schemas/v1/codex-mode-handoff.schema.json",
+        "scripts/validate-codex-mode.mjs",
+        "scripts/codex-mode-status.mjs",
+        ".agents/skills/codex-mode/SKILL.md",
+        ".github/agents/codex-mode.agent.md",
+        "docs/ADR-0013-CODEX-MODE-HANDOFF-STATE-INTEGRITY.md"
+      ],
+      "conformance_tests": [
+        "node scripts/validate-codex-mode.mjs",
+        "node scripts/codex-mode-status.mjs --json",
+        "npm run doctor",
+        "npm run test:schemas",
+        "npm run test:knowledge"
+      ],
+      "replaced_or_avoided_custom_code": [
+        "No second TaskStore",
+        "No bespoke task-board application",
+        "No exact self-referential main SHA requirement",
+        "No always-loaded complete Evidence bundle",
+        "No physical multi-agent requirement"
+      ],
+      "risks": [
+        "State snapshots still age and require activation-time reconciliation",
+        "Handoff mirrors can diverge if post-mutation persistence is skipped",
+        "Role labels can become ceremony unless the result/verifier contracts remain enforced"
+      ],
+      "rollback": "Remove v1.2 Handoff/integrity additions and restore v1.1 State/Spec/validator; provider Evidence and runtime authorities remain unchanged."
+    }
+  ]
+}
