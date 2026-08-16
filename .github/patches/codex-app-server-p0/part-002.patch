@@ -1,0 +1,198 @@
++    throw codedError("TURN_1_NOT_INPUT_REQUIRED", `turn 1 outcome was ${result.outcome}`);
++  }
++  if (!result.context_need) throw codedError("CONTEXT_NEED_MISSING", "turn 1 omitted context_need");
++  const expectedRequest = `need:${task.task_id}:required_value`;
++  const checks = {
++    task_id: result.context_need.task_id === task.task_id,
++    logical_attempt_id: result.context_need.logical_attempt_id === task.logical_attempt_id,
++    request_id: result.context_need.request_id === expectedRequest,
++    expected_seq: result.context_need.expected_seq === 0,
++    missing: result.context_need.missing.includes("required_value"),
++    artifact_paths_empty: result.artifact_paths.length === 0,
++  };
++  if (!Object.values(checks).every(Boolean)) {
++    throw codedError("CONTEXT_NEED_MISMATCH", "turn 1 ContextNeed did not match the Task Capsule", {
++      checks,
++      actual: result.context_need,
++      expected_request_id: expectedRequest,
++    });
++  }
++  return checks;
++}
++
++function assertCompletedResult(result) {
++  const checks = {
++    outcome: result.outcome === "COMPLETED",
++    context_need_null: result.context_need === null,
++    result_path_reported: result.artifact_paths.includes("result.txt"),
++  };
++  if (!Object.values(checks).every(Boolean)) {
++    throw codedError("TURN_2_NOT_COMPLETED", "turn 2 structured result did not close the task", {
++      checks,
++      result,
++    });
++  }
++  return checks;
++}
++
++function taskCapsuleForAttempt(attempt) {
++  const nonce = randomUUID();
++  return {
++    schema: "akashic.task-capsule/v1",
++    task_id: `codex-app-server-live-${attempt}-${nonce}`,
++    context_id: `ctx-${nonce}`,
++    logical_attempt_id: `attempt-${nonce}`,
++    goal: "Create result.txt in the fixture workspace using the required_value supplied later by ContextPacketDelta, without guessing or using a placeholder.",
++    acceptance: [
++      "Before required_value exists, return INPUT_REQUIRED and do not create result.txt.",
++      "After ContextPacketDelta arrives, write required_value to result.txt as exact UTF-8 bytes with no extra newline.",
++      "Return COMPLETED with artifact_paths containing result.txt.",
++    ],
++    context_refs: [],
++  };
++}
++
++function makeTurnOnePrompt({ task, taskText }) {
++  const requestId = `need:${task.task_id}:required_value`;
++  return [
++    "Execute the following Akashic Task Capsule inside the current fixture workspace.",
++    "This is turn 1. The required_value is deliberately absent.",
++    "Do not guess it, do not use a placeholder, and do not create result.txt yet.",
++    "Return a JSON object constrained by outputSchema.",
++    `For INPUT_REQUIRED, context_need.request_id MUST equal ${JSON.stringify(requestId)}, expected_seq MUST be 0, missing MUST contain \"required_value\", and artifact_paths MUST be empty.`,
++    "",
++    "Task Capsule:",
++    JSON.stringify(task, null, 2),
++    "",
++    "Fixture contract:",
++    taskText,
++  ].join("\n");
++}
++
++function makeContextDelta(task, requestId, requiredValue) {
++  return {
++    schema: "akashic.context-packet-delta/v1",
++    delta_id: `delta:${task.task_id}:1`,
++    task_id: task.task_id,
++    logical_attempt_id: task.logical_attempt_id,
++    request_id: requestId,
++    expected_seq: 0,
++    content: { required_value: requiredValue },
++  };
++}
++
++function makeTurnTwoPrompt(delta) {
++  return [
++    "Continue the current Task using only the following ContextPacketDelta.",
++    "Do not restate or replace the original Task Capsule. Return the structured terminal result.",
++    JSON.stringify(delta, null, 2),
++  ].join("\n");
++}
++
++function assertDeltaOnlyTurn({ turnTwoPrompt, task, turnOnePrompt }) {
++  const forbidden = [
++    canonicalJson(task),
++    JSON.stringify(task),
++    task.goal,
++    ...task.acceptance,
++    turnOnePrompt,
++    '"schema": "akashic.task-capsule/v1"',
++  ];
++  const found = forbidden.filter((value) => value && turnTwoPrompt.includes(value));
++  if (found.length > 0) {
++    throw codedError("TASK_CAPSULE_RESENT", "turn 2 resent Task Capsule material", {
++      found: found.map((value) => value.slice(0, 160)),
++    });
++  }
++  return true;
++}
++
++async function writeJson(path, value) {
++  await mkdir(dirname(path), { recursive: true });
++  await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
++}
++
++async function writeJsonl(path, values) {
++  await mkdir(dirname(path), { recursive: true });
++  const text = values.map((value) => JSON.stringify(value)).join("\n");
++  await writeFile(path, text ? `${text}\n` : "", "utf8");
++}
++
++async function hashEvidenceFiles(root) {
++  const entries = await readdir(root, { withFileTypes: true });
++  const hashes = {};
++  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
++    if (!entry.isFile() || entry.name === "sha256sums.json") continue;
++    const bytes = await readFile(join(root, entry.name));
++    hashes[entry.name] = {
++      sha256: `sha256:${sha256Bytes(bytes)}`,
++      size: bytes.length,
++    };
++  }
++  return hashes;
++}
++
++async function prepareWorkspace(fixtureRoot) {
++  const workspace = await mkdtemp(join(tmpdir(), "akashic-codex-app-server-"));
++  for (const name of ["TASK.md", "README.md"]) {
++    await cp(join(fixtureRoot, name), join(workspace, name));
++  }
++  return workspace;
++}
++
++function turnEventChecks(turnRun) {
++  const startedThread = turnRun.started.params?.threadId ?? turnRun.started.params?.thread_id;
++  const completedThread = turnRun.completed.params?.threadId ?? turnRun.completed.params?.thread_id;
++  const startedTurn = turnRun.started.params?.turn?.id;
++  const completedTurn = turnRun.completed.params?.turn?.id;
++  return {
++    turn_started_seen: Boolean(turnRun.started),
++    turn_completed_seen: Boolean(turnRun.completed),
++    thread_matches_started: startedThread === turnRun.threadId,
++    thread_matches_completed: completedThread === turnRun.threadId,
++    turn_matches_started: startedTurn === turnRun.turnId,
++    turn_matches_completed: completedTurn === turnRun.turnId,
++  };
++}
++
++async function certifyAttempt({
++  adapter,
++  attempt,
++  selection,
++  codexVersion,
++  protocolManifest,
++  fixtureRoot,
++  evidenceRoot,
++  sourceCommit,
++}) {
++  const startedAt = new Date().toISOString();
++  const runId = `${nowCompact()}-${String(attempt).padStart(2, "0")}-${randomUUID().slice(0, 8)}`;
++  const runEvidenceDir = join(evidenceRoot, runId);
++  const workspace = await prepareWorkspace(fixtureRoot);
++  const task = taskCapsuleForAttempt(attempt);
++  const taskText = await readFile(join(workspace, "TASK.md"), "utf8");
++  const expectedBytes = await readFile(join(fixtureRoot, "expected", "result.txt"));
++  const requiredValue = expectedBytes.toString("utf8");
++  const turnOnePrompt = makeTurnOnePrompt({ task, taskText });
++  const traceStart = adapter.transport.trace.length;
++  const eventStart = adapter.collector.notifications.length;
++  const violationStart = adapter.serverRequestViolations.length;
++
++  try {
++    const threadStarted = await adapter.startThread({ workspace, selection, ephemeral: true });
++    const threadId = threadStarted.thread.id;
++
++    const turnOne = await adapter.runTurn({
++      threadId,
++      inputText: turnOnePrompt,
++      outputSchema: TURN_OUTPUT_SCHEMA,
++      selection,
++    });
++    const turnOneParsed = parseStructuredResultFromEvents(turnOne.events).value;
++    const contextChecks = assertExactContextNeed(turnOneParsed, task);
++    if (await exists(join(workspace, "result.txt"))) {
++      throw codedError("ARTIFACT_CREATED_BEFORE_CONTEXT", "result.txt existed after turn 1");
++    }
++
++    const delta = makeContextDelta(task, turnOneParsed.context_need.request_id, requiredValue);
++    const turnTwoPrompt = makeTurnTwoPrompt(delta);
