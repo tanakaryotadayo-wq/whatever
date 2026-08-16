@@ -1,0 +1,12 @@
+{
+  "schema": "akashic.codex-provider-certification-status/v1",
+  "status": "FAILED",
+  "provider": "github-models",
+  "official_codex_binary": true,
+  "selected_model": "openai/gpt-4.1",
+  "exit_code": 1,
+  "receipt_found": true,
+  "source_commit": "18e8623bc463052c373e5865d02b1d75d838e2b3",
+  "credential_value_recorded": false,
+  "recorded_at": "2026-08-16T04:57:13.293Z"
+}
