@@ -1,0 +1,212 @@
++5. On success, return `COMPLETED`, set `context_need` to `null`, and include
++   `result.txt` in `artifact_paths`.
++6. Do not read or write outside this fixture workspace.
+diff --git a/fixtures/codex-live-two-turn/expected/result.txt b/fixtures/codex-live-two-turn/expected/result.txt
+new file mode 100644
+index 0000000..192c1cf
+--- /dev/null
++++ b/fixtures/codex-live-two-turn/expected/result.txt
+@@ -0,0 +1 @@
++AKASHIC_CODEX_APP_SERVER_LIVE_P0
+\ No newline at end of file
+diff --git a/knowledge/adoption-receipts/v0.10-codex-app-server-p0.json b/knowledge/adoption-receipts/v0.10-codex-app-server-p0.json
+new file mode 100644
+index 0000000..a9468f7
+--- /dev/null
++++ b/knowledge/adoption-receipts/v0.10-codex-app-server-p0.json
+@@ -0,0 +1,53 @@
++{
++  "schema": "akashic.external-adoption-receipt-set/v1",
++  "release_candidate": "v0.10.0-codex-app-server-p0",
++  "created_at": "2026-08-16T00:00:00Z",
++  "receipts": [
++    {
++      "receipt_id": "import-official-codex-app-server-live-two-turn",
++      "packet_ids": ["KPK-005", "KPK-017"],
++      "problem": "Replace the fixture Agent boundary and the old codex exec/resume smoke test with a version-matched, same-thread official Codex App Server certificate.",
++      "sources": [
++        {
++          "class": "OFFICIAL_IMPLEMENTATION",
++          "url": "https://github.com/openai/codex/tree/main/codex-rs/app-server",
++          "revision": "runtime-generated-from-installed-official-binary",
++          "experimental": false
++        },
++        {
++          "class": "OFFICIAL_IMPLEMENTATION",
++          "url": "https://github.com/openai/codex/tree/main/codex-rs/app-server-protocol",
++          "revision": "runtime-generated-from-installed-official-binary",
++          "experimental": false
++        }
++      ],
++      "import_mode": "REFERENCE_IMPLEMENTATION",
++      "decision": "ADAPTED",
++      "license": "Apache-2.0",
++      "pinned_version": "recorded-at-live-run",
++      "implementation_paths": [
++        "packages/codex-app-server-adapter",
++        "fixtures/codex-live-two-turn",
++        "scripts/codex-app-server-live-two-turn.mjs",
++        ".github/workflows/codex-live-acceptance.yml"
++      ],
++      "conformance_tests": [
++        "packages/codex-app-server-adapter/test/protocol.test.mjs",
++        "packages/codex-app-server-adapter/test/two-turn.fixture.test.mjs",
++        "packages/codex-app-server-adapter/test/live-two-turn.test.mjs"
++      ],
++      "replaced_or_avoided_custom_code": [
++        "codex exec plus exec resume masquerading as App Server evidence",
++        "hand-maintained protocol field guesses",
++        "turn/start response treated as terminal authority",
++        "automatic approval handling"
++      ],
++      "risks": [
++        "Official subscription authentication and a connected local or VM binary are required for live closure.",
++        "Protocol schema and model catalog can change with Codex versions; each certificate is version-bound.",
++        "Restart and thread/resume remain outside this P0."
++      ],
++      "rollback": "Remove the adapter package and certification workflow; retain backend-neutral RunAgentTurn contracts and fixture implementations."
++    }
++  ]
++}
+diff --git a/package.json b/package.json
+index 576e201..e84ea30 100644
+--- a/package.json
++++ b/package.json
+@@ -21,6 +21,8 @@
+     "test:cloudflare": "npm --prefix deploy/cloudflare-kernel test",
+     "test": "npm run doctor && npm run test:schemas && npm run test:knowledge && npm run test:core && npm run test:cloudflare",
+     "test:p0": "npm run test:integration -w @akashic/temporal-workflow",
++    "test:codex-adapter": "npm run test -w @akashic/codex-app-server-adapter",
++    "certify:codex-live": "node scripts/codex-app-server-live-two-turn.mjs",
+     "test:codex-live": "bash scripts/codex-live-acceptance.sh",
+     "test:drive-live": "npm run test:live -w @akashic/drive-adapter"
+   },
+diff --git a/packages/codex-app-server-adapter/README.md b/packages/codex-app-server-adapter/README.md
+new file mode 100644
+index 0000000..8030893
+--- /dev/null
++++ b/packages/codex-app-server-adapter/README.md
+@@ -0,0 +1,17 @@
++# @akashic/codex-app-server-adapter
++
++Backend-neutral Akashic `RunAgentTurn` adapter for the official Codex App Server.
++It uses JSONL over stdio and deliberately does not expose App Server directly to
++the network.
++
++The live certificate performs the official lifecycle:
++
++```text
++initialize -> initialized -> model/list -> thread/start
++-> turn/start #1 -> turn/completed
++-> turn/start #2 on the same thread -> turn/completed
++```
++
++Protocol types are not frozen by hand. The live harness generates the JSON
++Schema bundle from the exact installed Codex binary and stores its digest beside
++the evidence.
+diff --git a/packages/codex-app-server-adapter/generated/README.md b/packages/codex-app-server-adapter/generated/README.md
+new file mode 100644
+index 0000000..ebd2a41
+--- /dev/null
++++ b/packages/codex-app-server-adapter/generated/README.md
+@@ -0,0 +1,11 @@
++# Generated Codex App Server protocol
++
++A live certification run creates:
++
++```text
++<codex-version>/schema/**
++<codex-version>/schema/manifest.json
++```
++
++The files are generated by the exact official binary under test using
++`codex app-server generate-json-schema`. Do not hand-edit them.
+diff --git a/packages/codex-app-server-adapter/package.json b/packages/codex-app-server-adapter/package.json
+new file mode 100644
+index 0000000..25919a8
+--- /dev/null
++++ b/packages/codex-app-server-adapter/package.json
+@@ -0,0 +1,16 @@
++{
++  "name": "@akashic/codex-app-server-adapter",
++  "version": "0.10.0",
++  "private": true,
++  "type": "module",
++  "exports": {
++    ".": "./src/index.js",
++    "./certify": "./src/certify.js"
++  },
++  "scripts": {
++    "test": "node --test test/*.test.mjs"
++  },
++  "engines": {
++    "node": ">=22"
++  }
++}
+diff --git a/packages/codex-app-server-adapter/src/certify.js b/packages/codex-app-server-adapter/src/certify.js
+new file mode 100644
+index 0000000..f66f62a
+--- /dev/null
++++ b/packages/codex-app-server-adapter/src/certify.js
+@@ -0,0 +1,537 @@
++import { randomUUID } from "node:crypto";
++import {
++  cp,
++  mkdir,
++  mkdtemp,
++  readFile,
++  readdir,
++  rm,
++  stat,
++  writeFile,
++} from "node:fs/promises";
++import { tmpdir } from "node:os";
++import { basename, dirname, join, relative, resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import { CodexAppServerAdapter } from "./client.js";
++import { discoverCodexVersion, generateProtocolSchema } from "./process-manager.js";
++import { safeVersionSegment, writeProtocolManifest } from "./protocol-schema.js";
++import {
++  TURN_OUTPUT_SCHEMA,
++  artifactRefForFile,
++  assertNoCredentialLeak,
++  canonicalJson,
++  parseStructuredResultFromEvents,
++  sanitizeValue,
++  sha256Bytes,
++} from "./turn-output.js";
++
++const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
++const DEFAULT_REPO_ROOT = resolve(MODULE_DIR, "../../..");
++
++function codedError(code, message, details = {}) {
++  return Object.assign(new Error(message), { code, details });
++}
++
++function nowCompact() {
++  return new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
++}
++
++async function exists(path) {
++  try {
++    await stat(path);
++    return true;
++  } catch (error) {
++    if (error?.code === "ENOENT") return false;
++    throw error;
++  }
++}
++
++function requestMethods(trace) {
++  return trace
++    .filter((entry) => entry.direction === "outbound" && entry.kind === "request")
++    .map((entry) => entry.message?.method)
++    .filter(Boolean);
++}
++
++function count(values, expected) {
++  return values.filter((value) => value === expected).length;
++}
++
++function assertExactContextNeed(result, task) {
++  if (result.outcome !== "INPUT_REQUIRED") {
