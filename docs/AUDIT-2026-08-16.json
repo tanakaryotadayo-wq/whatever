@@ -1,0 +1,84 @@
+{
+  "schema": "akashic.daily-artifact-audit/v1",
+  "date": "2026-08-16",
+  "scope": [
+    "github-main",
+    "github-provider-prs",
+    "google-drive-repository-tree",
+    "generated-session-artifacts",
+    "codex-mode-ux"
+  ],
+  "verdict": "REFLECTION_CLOSED_PROVIDER_GATE_OPEN",
+  "canonical_main_before_v1_2": "0ef4e0daec408e7d812c6c848e999463e1c299e7",
+  "active_provider": {
+    "branch": "akashic/v0.10-codex-app-server-live",
+    "head": "e18e72df2460f5c7921b359b33857418d873ed27",
+    "pull_request": 15,
+    "draft": true
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "title": "provider state stale",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "repair": "machine state uses PROVIDER_ATTEMPTED_FAILED_AND_BLOCKED"
+    },
+    {
+      "id": "F2",
+      "title": "active provider workstream omitted",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "repair": "state/pointer reference v0.10 branch and PR #15"
+    },
+    {
+      "id": "F3",
+      "title": "NO_RESULT mislabeled as release/final",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "repair": "quarantined outside releases"
+    },
+    {
+      "id": "F4",
+      "title": "mutable state embedded in prose",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "repair": "progressive Pointer/State/Spec/Evidence split"
+    },
+    {
+      "id": "F5",
+      "title": "bootstrap manifest stale",
+      "severity": "HIGH",
+      "status": "CLOSED_V1_2",
+      "repair": "content-addressed mode manifest includes State/Handoff and enforcement files"
+    },
+    {
+      "id": "F6",
+      "title": "state head self-reference",
+      "severity": "HIGH",
+      "status": "CLOSED_V1_2",
+      "repair": "reconciled_against_main_head with ANCESTOR_OR_EQUAL semantics"
+    },
+    {
+      "id": "F7",
+      "title": "coordinator/executor handoff implicit",
+      "severity": "MEDIUM",
+      "status": "CLOSED_V1_2",
+      "repair": "SUPERVISOR/EXECUTOR/VERIFIER pipeline and machine handoff"
+    }
+  ],
+  "preserved_assets": {
+    "drive_in_progress_folder": "1IptDk7ePL2wUWXcLAVal8YtwiwCZgLew",
+    "drive_quarantine_folder": "1T18SSIWsrJPBH6Grv9i2wug-W4N25MXy",
+    "vercel_live_release_folder": "1zcpFWwBqsrVn6futjLUMwwuHmNMTeLTK"
+  },
+  "remaining_blockers": [
+    "credentialed official Codex runtime",
+    "provider compatibility diagnosis",
+    "valid exact-three PASS receipt"
+  ],
+  "branch_hygiene": {
+    "status": "DEFERRED_ARCHIVAL_REVIEW",
+    "reason": "historical branches may contain unique provenance; no deletion without ledger"
+  }
+}
