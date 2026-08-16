@@ -1,0 +1,229 @@
++    const line = `${JSON.stringify(message)}\n`;
++    this.trace.push({ at: timestamp(), direction: "outbound", kind, message: structuredClone(message) });
++    const accepted = this.stdin.write(line, "utf8");
++    if (!accepted) this.emit("backpressure", { direction: "outbound", kind });
++  }
++
++  #handleStdoutLine(rawLine) {
++    const line = String(rawLine).trim();
++    if (!line) return;
++    let message;
++    try {
++      message = JSON.parse(line);
++    } catch (error) {
++      const protocolError = new JsonlProtocolError("app-server emitted malformed JSONL", {
++        line: line.slice(0, 2_000),
++        cause: error instanceof Error ? error.message : String(error),
++      });
++      this.trace.push({ at: timestamp(), direction: "inbound", kind: "malformed", raw: line.slice(0, 2_000) });
++      this.emit("protocolError", protocolError);
++      this.failAll(protocolError);
++      return;
++    }
++
++    let kind = "unknown";
++    if (Object.hasOwn(message, "id") && typeof message.method === "string") kind = "serverRequest";
++    else if (typeof message.method === "string") kind = "notification";
++    else if (Object.hasOwn(message, "id")) kind = "response";
++    this.trace.push({ at: timestamp(), direction: "inbound", kind, message: structuredClone(message) });
++
++    if (kind === "serverRequest") {
++      this.emit("serverRequest", message);
++      return;
++    }
++    if (kind === "notification") {
++      this.emit("notification", message);
++      return;
++    }
++    if (kind === "response") {
++      const key = String(message.id);
++      const pending = this.pending.get(key);
++      if (!pending) {
++        this.emit("orphanResponse", message);
++        return;
++      }
++      this.pending.delete(key);
++      clearTimeout(pending.timer);
++      if (message.error) {
++        pending.reject(new JsonlRpcError(
++          message.error.message ?? `JSON-RPC error for ${pending.method}`,
++          { code: message.error.code, data: message.error.data, method: pending.method },
++        ));
++      } else {
++        pending.resolve(message.result);
++      }
++      return;
++    }
++
++    const protocolError = new JsonlProtocolError("unrecognized JSONL message", { message });
++    this.emit("protocolError", protocolError);
++  }
++
++  failAll(error) {
++    for (const { reject, timer } of this.pending.values()) {
++      clearTimeout(timer);
++      reject(error);
++    }
++    this.pending.clear();
++  }
++
++  close(error = new JsonlProtocolError("transport closed")) {
++    if (this.closed) return;
++    this.closed = true;
++    this.failAll(error);
++    this.stdoutInterface?.close();
++    this.stderrInterface?.close();
++  }
++}
+diff --git a/packages/codex-app-server-adapter/src/process-manager.js b/packages/codex-app-server-adapter/src/process-manager.js
+new file mode 100644
+index 0000000..79514fd
+--- /dev/null
++++ b/packages/codex-app-server-adapter/src/process-manager.js
+@@ -0,0 +1,155 @@
++import { spawn } from "node:child_process";
++import { mkdir, rm } from "node:fs/promises";
++import { resolve } from "node:path";
++import { setTimeout as sleep } from "node:timers/promises";
++import { JsonlProtocolError, JsonlTransport } from "./jsonl-transport.js";
++
++function commandResult(command, args, { cwd, env, timeoutMs = 30_000 } = {}) {
++  return new Promise((resolvePromise, reject) => {
++    const child = spawn(command, args, {
++      cwd,
++      env: { ...process.env, ...env },
++      stdio: ["ignore", "pipe", "pipe"],
++    });
++    let stdout = "";
++    let stderr = "";
++    const timer = setTimeout(() => {
++      child.kill("SIGTERM");
++      reject(new Error(`command timed out: ${command} ${args.join(" ")}`));
++    }, timeoutMs);
++    timer.unref?.();
++    child.stdout.setEncoding("utf8");
++    child.stderr.setEncoding("utf8");
++    child.stdout.on("data", (chunk) => { stdout += chunk; });
++    child.stderr.on("data", (chunk) => { stderr += chunk; });
++    child.once("error", (error) => {
++      clearTimeout(timer);
++      reject(error);
++    });
++    child.once("close", (code, signal) => {
++      clearTimeout(timer);
++      if (code === 0) resolvePromise({ stdout, stderr, code, signal });
++      else reject(new Error(
++        `command failed (${code ?? signal}): ${command} ${args.join(" ")}\n${stderr.slice(-4_000)}`,
++      ));
++    });
++  });
++}
++
++export async function discoverCodexVersion(codexBin = "codex") {
++  const result = await commandResult(codexBin, ["--version"]);
++  const version = result.stdout.trim() || result.stderr.trim();
++  if (!version) throw new Error("codex --version returned no version string");
++  return version.split(/\r?\n/)[0].trim();
++}
++
++export async function generateProtocolSchema({ codexBin = "codex", outDir, cwd, env } = {}) {
++  if (!outDir) throw new TypeError("outDir is required");
++  const absolute = resolve(outDir);
++  await rm(absolute, { recursive: true, force: true });
++  await mkdir(absolute, { recursive: true });
++  const result = await commandResult(
++    codexBin,
++    ["app-server", "generate-json-schema", "--out", absolute],
++    { cwd, env, timeoutMs: 120_000 },
++  );
++  return { outDir: absolute, stdout: result.stdout, stderr: result.stderr };
++}
++
++export class CodexAppServerProcess {
++  constructor({
++    command = "codex",
++    args = ["app-server", "--stdio"],
++    cwd = undefined,
++    env = {},
++    requestTimeoutMs = 30_000,
++  } = {}) {
++    this.command = command;
++    this.args = [...args];
++    this.cwd = cwd;
++    this.env = env;
++    this.requestTimeoutMs = requestTimeoutMs;
++    this.child = null;
++    this.transport = null;
++    this.exit = null;
++    this.exitPromise = null;
++  }
++
++  async start() {
++    if (this.child) return this;
++    const child = spawn(this.command, this.args, {
++      cwd: this.cwd,
++      env: {
++        ...process.env,
++        RUST_LOG: process.env.RUST_LOG ?? "warn",
++        LOG_FORMAT: process.env.LOG_FORMAT ?? "json",
++        ...this.env,
++      },
++      stdio: ["pipe", "pipe", "pipe"],
++    });
++    this.child = child;
++    child.stdin.setDefaultEncoding("utf8");
++    child.stdout.setEncoding("utf8");
++    child.stderr.setEncoding("utf8");
++    this.transport = new JsonlTransport({
++      stdin: child.stdin,
++      stdout: child.stdout,
++      stderr: child.stderr,
++      requestTimeoutMs: this.requestTimeoutMs,
++    });
++    this.transport.start();
++
++    this.exitPromise = new Promise((resolveExit, rejectStart) => {
++      let started = false;
++      child.once("spawn", () => {
++        started = true;
++      });
++      child.once("error", (error) => {
++        if (!started) rejectStart(error);
++        this.transport?.close(new JsonlProtocolError("app-server process error", {
++          cause: error.message,
++        }));
++      });
++      child.once("close", (code, signal) => {
++        this.exit = { code, signal, at: new Date().toISOString() };
++        this.transport?.close(new JsonlProtocolError("app-server process exited", this.exit));
++        resolveExit(this.exit);
++      });
++    });
++
++    await new Promise((resolveSpawn, rejectSpawn) => {
++      child.once("spawn", resolveSpawn);
++      child.once("error", rejectSpawn);
++    });
++    return this;
++  }
++
++  assertAlive() {
++    if (!this.child || this.exit || this.child.killed) {
++      throw new JsonlProtocolError("app-server process is not alive", { exit: this.exit });
++    }
++  }
++
++  async stop({ graceMs = 3_000, terminateMs = 2_000 } = {}) {
++    if (!this.child || this.exit) return this.exit;
++    try {
++      this.child.stdin.end();
++    } catch {}
++
++    const graceful = await Promise.race([
++      this.exitPromise,
++      sleep(graceMs).then(() => null),
++    ]);
++    if (graceful) return graceful;
++
++    this.child.kill("SIGTERM");
++    const terminated = await Promise.race([
