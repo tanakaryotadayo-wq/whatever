@@ -1,0 +1,226 @@
+name: Finalize Codex App Server P0 source
+
+on:
+  push:
+    branches:
+      - akashic/p0-codex-app-server-live-two-turn
+    paths:
+      - .github/workflows/finalize-codex-app-server-p0.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: finalize-codex-app-server-p0-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    if: ${{ !contains(github.event.head_commit.message || '', '[codex-p0-ready]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: akashic/p0-codex-app-server-live-two-turn
+          fetch-depth: 1
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Reassemble and apply verified source patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .github/patches/codex-app-server-p0/part-*.patch > /tmp/codex-app-server-p0.patch
+          echo '446e202dd2d4fd5b4b8582eb599b76b66ec08d48ffd29290acfe2aedcc751336  /tmp/codex-app-server-p0.patch' | sha256sum -c -
+          git apply --check /tmp/codex-app-server-p0.patch
+          git apply /tmp/codex-app-server-p0.patch
+      - name: Align adapter with exact stable official protocol casing
+        shell: python
+        run: |
+          from pathlib import Path
+
+          client_path = Path('packages/codex-app-server-adapter/src/client.js')
+          client = client_path.read_text()
+          replacements = {
+              'processArgs = ["app-server", "--stdio"],': 'processArgs = ["app-server"],',
+              '{ type: "text", text, textElements: [] }': '{ type: "text", text, text_elements: [] }',
+              'sandbox: "workspaceWrite",': 'sandbox: "workspace-write",',
+          }
+          for old, new in replacements.items():
+              if old not in client:
+                  raise SystemExit(f'missing client compatibility anchor: {old}')
+              client = client.replace(old, new, 1)
+          client_path.write_text(client)
+
+          manager_path = Path('packages/codex-app-server-adapter/src/process-manager.js')
+          manager = manager_path.read_text()
+          old = 'args = ["app-server", "--stdio"],'
+          if old not in manager:
+              raise SystemExit('missing process-manager compatibility anchor')
+          manager_path.write_text(manager.replace(old, 'args = ["app-server"],', 1))
+
+          test_path = Path('packages/codex-app-server-adapter/test/protocol.test.mjs')
+          test = test_path.read_text()
+          test = test.replace(
+              'import assert from "node:assert/strict";\n',
+              'import assert from "node:assert/strict";\nimport { mkdtemp, rm } from "node:fs/promises";\nimport { tmpdir } from "node:os";\nimport { join } from "node:path";\n',
+              1,
+          )
+          regression = r'''
+
+test("stable App Server wire contract uses default stdio launch and generated field casing", async () => {
+  assert.deepEqual(new CodexAppServerProcess().args, ["app-server"]);
+  const client = adapter();
+  const workspace = await mkdtemp(join(tmpdir(), "akashic-codex-wire-contract-"));
+  const inputText = '{"task_id":"wire-task","logical_attempt_id":"wire-attempt"}';
+  try {
+    await client.start();
+    const selection = client.selectModel();
+    const { thread } = await client.startThread({ workspace, selection });
+    await client.runTurn({
+      threadId: thread.id,
+      inputText,
+      outputSchema: { type: "object" },
+      selection,
+      timeoutMs: 5_000,
+    });
+    const outbound = client.transport.trace.filter((entry) => entry.direction === "outbound");
+    const threadStart = outbound.find((entry) => entry.message?.method === "thread/start");
+    const turnStart = outbound.find((entry) => entry.message?.method === "turn/start");
+    assert.equal(threadStart.message.params.sandbox, "workspace-write");
+    assert.deepEqual(turnStart.message.params.input[0], {
+      type: "text",
+      text: inputText,
+      text_elements: [],
+    });
+  } finally {
+    await client.stop();
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+'''
+          if 'stable App Server wire contract uses default stdio launch' not in test:
+              test += regression
+          test_path.write_text(test)
+      - name: Regenerate exact workspace lockfile
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Install exact dependency graph
+        run: npm ci
+      - name: Dependency security gate
+        run: npm audit --audit-level=high
+      - name: Workspace, schema, and imported-pattern validation
+        run: |
+          npm run doctor
+          npm run test:schemas
+          npm run test:knowledge
+      - name: Core and Codex adapter tests
+        run: |
+          npm run test:core
+          npm run test:codex-adapter
+      - name: Temporal durable P0 regression
+        run: npm run test:p0
+      - name: Vercel gateway regression
+        env:
+          WORKFLOW_TARGET_WORLD: local
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: npm run build:gateway
+      - name: Cloudflare conformance regression
+        run: npm run test:cloudflare
+      - name: Prepare canonical tree without bootstrap material
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .github/patches/codex-app-server-p0
+          rm -f .github/workflows/apply-codex-app-server-p0.yml
+          rm -f .github/workflows/finalize-codex-app-server-p0.yml
+          git add -A
+          git diff --cached --check
+          git diff --cached --name-status
+      - name: Create one atomic Git tree and commit through Git Data API
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: akashic/p0-codex-app-server-live-two-turn
+          CHECKOUT_SHA: ${{ github.sha }}
+        shell: node {0}
+        run: |
+          const { execFileSync } = require('node:child_process');
+          const { existsSync, readFileSync } = require('node:fs');
+
+          const [owner, repo] = process.env.REPOSITORY.split('/');
+          const branch = process.env.BRANCH;
+          const token = process.env.GH_TOKEN;
+          const api = 'https://api.github.com';
+
+          async function request(method, path, body) {
+            const response = await fetch(`${api}${path}`, {
+              method,
+              headers: {
+                accept: 'application/vnd.github+json',
+                authorization: `Bearer ${token}`,
+                'x-github-api-version': '2022-11-28',
+                'user-agent': 'akashic-codex-p0-finalizer',
+                ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+              },
+              body: body === undefined ? undefined : JSON.stringify(body),
+            });
+            const text = await response.text();
+            const value = text ? JSON.parse(text) : {};
+            if (!response.ok) {
+              throw new Error(`${method} ${path} failed ${response.status}: ${text.slice(0, 4000)}`);
+            }
+            return value;
+          }
+
+          const refPath = `/repos/${owner}/${repo}/git/ref/heads/${branch.split('/').map(encodeURIComponent).join('/')}`;
+          const liveRef = await request('GET', refPath);
+          const parentSha = liveRef.object.sha;
+          if (parentSha !== process.env.CHECKOUT_SHA) {
+            throw new Error(`branch moved during validation: checkout=${process.env.CHECKOUT_SHA} live=${parentSha}`);
+          }
+          const parentCommit = await request('GET', `/repos/${owner}/${repo}/git/commits/${parentSha}`);
+
+          const paths = execFileSync('git', ['diff', '--cached', '--name-only', '-z', 'HEAD'])
+            .toString('utf8')
+            .split('\0')
+            .filter(Boolean);
+          if (paths.length === 0) throw new Error('validated tree has no changes');
+
+          const tree = [];
+          for (const path of paths) {
+            if (!existsSync(path)) {
+              tree.push({ path, mode: '100644', type: 'blob', sha: null });
+              continue;
+            }
+            const indexLine = execFileSync('git', ['ls-files', '-s', '--', path]).toString('utf8').trim();
+            const mode = indexLine.split(/\s+/)[0] || '100644';
+            const bytes = readFileSync(path);
+            const blob = await request('POST', `/repos/${owner}/${repo}/git/blobs`, {
+              content: bytes.toString('base64'),
+              encoding: 'base64',
+            });
+            tree.push({ path, mode, type: 'blob', sha: blob.sha });
+          }
+
+          const createdTree = await request('POST', `/repos/${owner}/${repo}/git/trees`, {
+            base_tree: parentCommit.tree.sha,
+            tree,
+          });
+          const createdCommit = await request('POST', `/repos/${owner}/${repo}/git/commits`, {
+            message: 'feat(codex): add official App Server live two-turn certification [codex-p0-ready]',
+            tree: createdTree.sha,
+            parents: [parentSha],
+          });
+
+          const refBeforeUpdate = await request('GET', refPath);
+          if (refBeforeUpdate.object.sha !== parentSha) {
+            throw new Error(`branch changed before atomic ref update: expected=${parentSha} actual=${refBeforeUpdate.object.sha}`);
+          }
+          await request('PATCH', `/repos/${owner}/${repo}/git/refs/heads/${branch.split('/').map(encodeURIComponent).join('/')}`, {
+            sha: createdCommit.sha,
+            force: false,
+          });
+          console.log(JSON.stringify({ ok: true, parent_sha: parentSha, tree_sha: createdTree.sha, commit_sha: createdCommit.sha, changed_paths: paths.length }));
