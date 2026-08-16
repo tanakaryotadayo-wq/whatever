@@ -14,19 +14,19 @@ Akashic decides **who executes what, with which context and authority, and which
 
 ## Codex mode
 
-The cross-session operating entry point is:
+Cross-session entry:
 
 ```text
 codexモード起動
 ```
 
-Codex mode uses progressive disclosure instead of loading the entire project history:
+Progressive loading:
 
 ```text
-Pointer → Current State → Stable Spec → Selected Evidence
+Pointer → Current State → Active Handoff → Stable Spec → Selected Evidence
 ```
 
-Available commands:
+Commands:
 
 ```text
 codexモード 状態
@@ -34,6 +34,7 @@ codexモード 続行
 codexモード 診断
 codexモード 証拠
 codexモード 計画
+codexモード 引継ぎ
 codexモード 終了
 ```
 
@@ -42,10 +43,24 @@ Canonical files:
 ```text
 docs/modes/CODEX_MODE_POINTER.md
 docs/modes/CODEX_MODE_STATE.json
+docs/modes/CODEX_MODE_HANDOFF.json
 docs/modes/CODEX_MODE.md
+docs/modes/MANIFEST_CODEX_MODE_20260816.json
 ```
 
-Provider state is fail-closed. Fixture PASS, workflow green, or a found receipt does not equal official provider certification. `CERTIFIED` requires exactly three consecutive official-binary PASS runs on one Codex version.
+The operating pipeline is semantic, not a second orchestration system:
+
+```text
+SUPERVISOR → Work Packet
+EXECUTOR   → Result Packet
+VERIFIER   → Adoption verdict
+```
+
+State is a snapshot. `reconciled_against_main_head` is checked as ancestor-or-equal, avoiding a self-referential SHA. Provider state is fail-closed: fixture PASS, workflow green, or a receipt file existing does not equal official provider certification.
+
+```bash
+npm run codex:status
+```
 
 ## Existing-first engineering
 
@@ -59,7 +74,7 @@ knowledge/adoption-receipts/
 
 ## Current workflow slice
 
-Both workflow adapters implement the same Akashic invariants:
+Both workflow adapters implement:
 
 ```text
 SUBMITTED
@@ -72,21 +87,14 @@ SUBMITTED
 → COMPLETED / FAILED / CANCELED
 ```
 
-The Vercel adapter imports stable `workflow@4.6.0` primitives:
-
-- `"use workflow"` and `"use step"`;
-- deterministic Hook ownership and Context Delta resume;
-- native run cancellation and deployment version retention;
-- stable step IDs for effect idempotency inputs;
-- compact workflow-stream projections.
-
-It does **not** replace Akashic Context CAS, effect fencing, verification, or adoption semantics.
+The Vercel adapter imports stable `workflow@4.6.0` primitives but does not replace Akashic Context CAS, effect fencing, verification, or adoption semantics.
 
 ## Verify
 
 ```bash
 npm ci
 npm run doctor
+npm run codex:status
 npm run test:schemas
 npm run test:knowledge
 npm run test:core
