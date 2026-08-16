@@ -1,0 +1,207 @@
+diff --git a/.github/workflows/codex-live-acceptance.yml b/.github/workflows/codex-live-acceptance.yml
+index 5144329..4e14f37 100644
+--- a/.github/workflows/codex-live-acceptance.yml
++++ b/.github/workflows/codex-live-acceptance.yml
+@@ -1,28 +1,77 @@
+-name: Official Codex live acceptance
++name: Official Codex App Server live two-turn certification
+ 
+ on:
+   workflow_dispatch:
++  push:
++    branches:
++      - akashic/p0-codex-app-server-live-two-turn
++    paths:
++      - packages/codex-app-server-adapter/**
++      - fixtures/codex-live-two-turn/**
++      - scripts/codex-app-server-live-two-turn.mjs
++      - scripts/codex-live-two-turn.mjs
++      - scripts/codex-live-acceptance.sh
++      - schemas/v1/codex-live-two-turn-evidence.schema.json
++      - package.json
++      - package-lock.json
++      - .github/workflows/codex-live-acceptance.yml
+ 
+ permissions:
+-  contents: read
++  contents: write
++
++concurrency:
++  group: codex-app-server-live-${{ github.ref }}
++  cancel-in-progress: false
+ 
+ jobs:
+-  codex-two-turn:
+-    if: ${{ vars.CODEX_LIVE_RUNNER_ENABLED == 'true' }}
++  codex-app-server-two-turn:
++    if: ${{ vars.CODEX_LIVE_RUNNER_ENABLED == 'true' && !contains(github.event.head_commit.message || '', '[codex-live-evidence]') }}
+     runs-on: [self-hosted, macOS, akashic-codex]
+-    timeout-minutes: 30
++    timeout-minutes: 60
+     steps:
+-      - uses: actions/checkout@v4
+-      - uses: actions/setup-node@v4
++      - uses: actions/checkout@v6
++        with:
++          ref: akashic/p0-codex-app-server-live-two-turn
++      - uses: actions/setup-node@v6
+         with:
+           node-version: 22
+-      - run: npm install
+-      - name: Real subscription-auth Codex two-turn
++          cache: npm
++          cache-dependency-path: package-lock.json
++      - name: Verify official binary and subscription authentication boundary
++        run: |
++          command -v codex
++          codex --version
++          codex app-server --help >/dev/null
++      - name: Install exact dependency graph
++        run: npm ci
++      - name: Adapter fixture and protocol tests
++        run: npm run test:codex-adapter
++      - name: Temporal P0 regression
++        run: npm run test:p0
++      - name: Official App Server three-pass certification
+         env:
+           AKASHIC_CODEX_LIVE: '1'
+-        run: npm run test:codex-live
++          AKASHIC_CODEX_LIVE_RUNS: '3'
++          AKASHIC_SOURCE_COMMIT: ${{ github.sha }}
++        run: npm run certify:codex-live
++      - name: Commit generated version schema and machine evidence
++        if: success()
++        run: |
++          git config user.name "github-actions[bot]"
++          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
++          git add packages/codex-app-server-adapter/generated evidence/codex-live-two-turn
++          if git diff --cached --quiet; then
++            echo "No generated evidence changes"
++            exit 0
++          fi
++          git commit -m "evidence(codex): certify official App Server live two-turn [codex-live-evidence]"
++          git push origin HEAD:akashic/p0-codex-app-server-live-two-turn
+       - uses: actions/upload-artifact@v4
+         if: always()
+         with:
+-          name: codex-live-evidence
+-          path: .akashic-runtime/live-codex
++          name: codex-app-server-live-two-turn-${{ github.sha }}
++          path: |
++            evidence/codex-live-two-turn/
++            packages/codex-app-server-adapter/generated/
++          if-no-files-found: warn
++          retention-days: 30
+diff --git a/docs/ADR-CODEX-APP-SERVER-LIVE-TWO-TURN.md b/docs/ADR-CODEX-APP-SERVER-LIVE-TWO-TURN.md
+new file mode 100644
+index 0000000..5aa7350
+--- /dev/null
++++ b/docs/ADR-CODEX-APP-SERVER-LIVE-TWO-TURN.md
+@@ -0,0 +1,65 @@
++# ADR — Official Codex App Server Live Two-Turn Certification
++
++**Status:** PROPOSED UNTIL LIVE RECEIPT IS `CERTIFIED`
++**Date:** 2026-08-16
++
++## Decision
++
++Akashic's official Codex boundary is a long-lived local or VM process:
++
++```text
++Temporal / Vercel Workflow
++  -> Akashic Runner
++  -> codex app-server over JSONL stdio
++```
++
++The App Server is not run as a long-lived Vercel Function, is not directly
++published to the Internet, and does not use the experimental WebSocket listener
++as a production contract.
++
++## Imported official primitives
++
++- Connection handshake: `initialize` followed by `initialized`.
++- Runtime catalog: `model/list` with visible-model, effort, and service-tier
++  validation.
++- Conversation ownership: one `thread/start`, then multiple `turn/start` calls
++  against the same `threadId`.
++- Authoritative completion: `turn/completed`, not the immediate `turn/start`
++  response.
++- Interruption: `turn/interrupt`, followed by terminal notification evidence.
++- Structured output: `turn/start.outputSchema`.
++- Version matching: generate JSON Schema from the exact installed binary with
++  `codex app-server generate-json-schema`.
++
++Official source: `openai/codex`, `codex-rs/app-server/README.md` and the
++version-generated App Server protocol bundle.
++
++## Certification boundary
++
++A certificate is valid only when the same official Codex version completes
++three consecutive attempts. Every attempt must prove:
++
++1. one `thread/start`;
++2. exactly two `turn/start` requests;
++3. `INPUT_REQUIRED` in turn 1;
++4. a delta-only turn 2 in the same thread;
++5. `COMPLETED` from `turn/completed`;
++6. exact artifact bytes, size, and SHA-256;
++7. sanitized request, event, and protocol evidence;
++8. no approval or elicitation request.
++
++Any server-initiated approval or elicitation request is answered with a
++fail-closed JSON-RPC error and invalidates the run. Akashic `ContextNeed` is not
++mapped to a Codex approval request.
++
++## Explicit non-claims
++
++This certificate does not prove process restart plus `thread/resume`, production
++Temporal/Vercel Activity wiring, Drive publication, multi-agent routing, or a
++final Workflow Authority decision.
++
++## Replacement
++
++The prior `codex exec` plus `codex exec resume` smoke script is not accepted as
++App Server evidence. Its filename remains only as a compatibility entry point
++that delegates to this adapter.
+diff --git a/fixtures/codex-live-two-turn/README.md b/fixtures/codex-live-two-turn/README.md
+new file mode 100644
+index 0000000..5052118
+--- /dev/null
++++ b/fixtures/codex-live-two-turn/README.md
+@@ -0,0 +1,15 @@
++# Live Two-Turn Certification Fixture
++
++This fixture proves one narrow contract:
++
++```text
++Task Capsule
++  -> turn 1: INPUT_REQUIRED
++  -> ContextPacketDelta only
++  -> same thread, turn 2: COMPLETED
++  -> exact result.txt bytes
++```
++
++The `expected/` directory is used only by the certification harness and is not
++copied into the Codex workspace. The model therefore cannot obtain the expected
++value from the filesystem before the ContextPacketDelta arrives.
+diff --git a/fixtures/codex-live-two-turn/TASK.md b/fixtures/codex-live-two-turn/TASK.md
+new file mode 100644
+index 0000000..dc6f427
+--- /dev/null
++++ b/fixtures/codex-live-two-turn/TASK.md
+@@ -0,0 +1,18 @@
++# Codex App Server Live Two-Turn Fixture
++
++The current task is intentionally incomplete until a `ContextPacketDelta` supplies
++`content.required_value`.
++
++Rules:
++
++1. Before `required_value` is supplied, do not guess it, do not use a placeholder,
++   and do not create `result.txt`.
++2. Return `INPUT_REQUIRED` using the caller-provided task identity and request ID.
++3. After the matching delta arrives in the same Codex thread, create `result.txt`
++   in this workspace.
++4. The file bytes must be exactly the UTF-8 encoding of `required_value`; do not
++   append a newline or any other bytes. A reliable implementation is
++   `Path("result.txt").write_bytes(required_value.encode("utf-8"))`.
