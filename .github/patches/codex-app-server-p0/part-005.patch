@@ -1,0 +1,207 @@
++  async listModels() {
++    const models = [];
++    let cursor = null;
++    do {
++      const response = await this.transport.request("model/list", {
++        cursor,
++        limit: 100,
++        includeHidden: false,
++      });
++      models.push(...(response?.data ?? []));
++      cursor = response?.nextCursor ?? response?.next_cursor ?? null;
++    } while (cursor);
++    if (models.length === 0) throw codedError("NO_MODELS", "model/list returned no available models");
++    return models;
++  }
++
++  selectModel({ requestedModel = null, requestedEffort = null, requestedServiceTier = null } = {}) {
++    const visible = this.models.filter((model) => model.hidden !== true);
++    if (visible.length === 0) throw codedError("NO_VISIBLE_MODELS", "model/list returned no visible models");
++
++    let selected;
++    if (requestedModel) {
++      selected = visible.find((model) => modelName(model) === requestedModel || model.id === requestedModel);
++      if (!selected) throw codedError("MODEL_UNAVAILABLE", `requested model is unavailable: ${requestedModel}`);
++    } else {
++      selected = visible.find((model) => model.isDefault === true) ?? visible[0];
++    }
++
++    const efforts = (selected.supportedReasoningEfforts ?? selected.supported_reasoning_efforts ?? [])
++      .map(normalizeEffortOption)
++      .filter(Boolean);
++    const defaultEffort = selected.defaultReasoningEffort ?? selected.default_reasoning_effort ?? efforts[0] ?? null;
++    const effort = requestedEffort ?? defaultEffort;
++    if (effort && !efforts.includes(effort)) {
++      throw codedError("EFFORT_UNAVAILABLE", `reasoning effort ${effort} is unavailable for ${modelName(selected)}`, { efforts });
++    }
++
++    const tiers = (selected.serviceTiers ?? selected.service_tiers ?? []).map((tier) => tier.id ?? tier).filter(Boolean);
++    const defaultTier = selected.defaultServiceTier ?? selected.default_service_tier ?? null;
++    const serviceTier = requestedServiceTier ?? defaultTier;
++    if (requestedServiceTier && !tiers.includes(requestedServiceTier)) {
++      throw codedError("SERVICE_TIER_UNAVAILABLE", `service tier ${requestedServiceTier} is unavailable`, { tiers });
++    }
++
++    return {
++      id: selected.id,
++      model: modelName(selected),
++      display_name: selected.displayName ?? selected.display_name ?? null,
++      effort,
++      supported_reasoning_efforts: efforts,
++      service_tier: serviceTier,
++      supported_service_tiers: tiers,
++      raw: structuredClone(selected),
++    };
++  }
++
++  async startThread({ workspace, selection, ephemeral = true }) {
++    const params = {
++      model: selection.model,
++      cwd: workspace,
++      approvalPolicy: "never",
++      sandbox: "workspaceWrite",
++      ephemeral,
++    };
++    if (selection.service_tier) params.serviceTier = selection.service_tier;
++    const response = await this.transport.request("thread/start", params);
++    const thread = response?.thread;
++    if (!thread?.id) throw codedError("THREAD_START_INVALID", "thread/start did not return thread.id", { response });
++    return { response, thread, params };
++  }
++
++  async runTurn({ threadId, inputText, outputSchema, selection, timeoutMs = this.turnTimeoutMs }) {
++    const eventStartIndex = this.collector.notifications.length;
++    const traceStartIndex = this.transport.trace.length;
++    const params = {
++      threadId,
++      input: [textInput(inputText)],
++      outputSchema,
++    };
++    if (selection?.model) params.model = selection.model;
++    if (selection?.effort) params.effort = selection.effort;
++    if (selection?.service_tier) params.serviceTier = selection.service_tier;
++
++    const response = await this.transport.request("turn/start", params);
++    const turn = response?.turn;
++    if (!turn?.id) throw codedError("TURN_START_INVALID", "turn/start did not return turn.id", { response });
++    const turnId = turn.id;
++
++    const started = await this.collector.waitFor("turn/started", {
++      threadId,
++      turnId,
++      startIndex: eventStartIndex,
++      timeoutMs: Math.min(timeoutMs, 120_000),
++    });
++
++    let completed;
++    try {
++      completed = await this.collector.waitFor("turn/completed", {
++        threadId,
++        turnId,
++        startIndex: eventStartIndex,
++        timeoutMs,
++      });
++    } catch (error) {
++      if (error?.code !== "NOTIFICATION_TIMEOUT") throw error;
++      await this.transport.request("turn/interrupt", { threadId, turnId }, { timeoutMs: 30_000 });
++      completed = await this.collector.waitFor("turn/completed", {
++        threadId,
++        turnId,
++        startIndex: eventStartIndex,
++        timeoutMs: this.interruptGraceMs,
++      });
++      const status = completed.params?.turn?.status;
++      throw codedError("TURN_TIMEOUT_INTERRUPTED", `turn timed out and was interrupted with status ${status}`, {
++        threadId,
++        turnId,
++        status,
++      });
++    }
++
++    const status = completed.params?.turn?.status;
++    if (!isTerminalStatus(status)) {
++      throw codedError("TURN_COMPLETION_INVALID", `turn/completed carried non-terminal status: ${status}`, { completed });
++    }
++    if (String(status).toLowerCase() !== "completed") {
++      throw codedError("TURN_NOT_COMPLETED", `turn ended with status ${status}`, { completed });
++    }
++    if (this.serverRequestViolations.length > 0) {
++      throw codedError("SERVER_REQUEST_FAIL_CLOSED", "app-server requested approval or elicitation during certification", {
++        requests: this.serverRequestViolations,
++      });
++    }
++
++    const events = this.collector.snapshot(eventStartIndex);
++    return {
++      threadId,
++      turnId,
++      params,
++      response,
++      started,
++      completed,
++      events,
++      eventCounts: this.collector.counts(events),
++      trace: this.transport.snapshotTrace(traceStartIndex),
++    };
++  }
++
++  async stop() {
++    this.collector?.dispose();
++    return await this.processManager.stop();
++  }
++}
+diff --git a/packages/codex-app-server-adapter/src/event-collector.js b/packages/codex-app-server-adapter/src/event-collector.js
+new file mode 100644
+index 0000000..209b603
+--- /dev/null
++++ b/packages/codex-app-server-adapter/src/event-collector.js
+@@ -0,0 +1,99 @@
++import { EventEmitter } from "node:events";
++
++function threadIdOf(notification) {
++  return notification?.params?.threadId ?? notification?.params?.thread_id ?? null;
++}
++
++function turnOf(notification) {
++  return notification?.params?.turn ?? null;
++}
++
++function turnIdOf(notification) {
++  return turnOf(notification)?.id
++    ?? notification?.params?.turnId
++    ?? notification?.params?.turn_id
++    ?? notification?.params?.item?.turnId
++    ?? notification?.params?.item?.turn_id
++    ?? null;
++}
++
++export class EventCollector extends EventEmitter {
++  constructor(transport) {
++    super();
++    this.transport = transport;
++    this.notifications = [];
++    this.onNotification = (notification) => {
++      const entry = {
++        index: this.notifications.length,
++        at: new Date().toISOString(),
++        method: notification.method,
++        params: structuredClone(notification.params ?? {}),
++      };
++      this.notifications.push(entry);
++      this.emit("notification", entry);
++      this.emit(notification.method, entry);
++    };
++    transport.on("notification", this.onNotification);
++  }
++
++  dispose() {
++    this.transport.off("notification", this.onNotification);
++  }
++
++  snapshot(startIndex = 0) {
++    return structuredClone(this.notifications.slice(startIndex));
++  }
++
++  find(method, { threadId = null, turnId = null, startIndex = 0 } = {}) {
++    return this.notifications.find((entry, index) => {
++      if (index < startIndex || entry.method !== method) return false;
