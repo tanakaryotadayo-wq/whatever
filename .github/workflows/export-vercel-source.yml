@@ -1,0 +1,27 @@
+name: Export canonical Vercel Gateway source
+
+on:
+  push:
+    branches:
+      - akashic/export-gpt-actions-vercel-source
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Record source identity
+        run: |
+          printf '%s\n' "$GITHUB_SHA" > deploy/vercel-chatgpt-app/SOURCE_COMMIT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: akashic-vercel-gateway-source-${{ github.sha }}
+          path: deploy/vercel-chatgpt-app
+          include-hidden-files: true
+          if-no-files-found: error
+          compression-level: 9
