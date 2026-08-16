@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "packages/*",
+    "packages/contracts",
+    "packages/drive-adapter",
+    "packages/eval-flywheel",
     "workflows/*",
     "apps/*",
     "deploy/vercel-chatgpt-app"
@@ -16,7 +18,8 @@
     "build:gateway": "npm run build -w akashic-chatgpt-gateway",
     "test:schemas": "node scripts/validate-schemas.mjs",
     "test:knowledge": "node scripts/validate-knowledge-packets.mjs && node scripts/validate-external-adoption-policy.mjs && npm --prefix experiments/orchestrator-bakeoff test",
-    "test:core": "npm run test --workspaces --if-present",
+    "test:codex-adapter": "node --test packages/codex-app-server-adapter/test/*.test.mjs",
+    "test:core": "npm run test --workspaces --if-present && npm run test:codex-adapter",
     "test:gateway": "npm run test -w akashic-chatgpt-gateway",
     "test:cloudflare": "npm --prefix deploy/cloudflare-kernel test",
     "test": "npm run doctor && npm run test:schemas && npm run test:knowledge && npm run test:core && npm run test:cloudflare",
