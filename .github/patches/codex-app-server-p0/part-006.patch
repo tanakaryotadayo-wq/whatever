@@ -1,0 +1,229 @@
++      if (threadId && threadIdOf(entry) !== threadId) return false;
++      if (turnId && turnIdOf(entry) !== turnId) return false;
++      return true;
++    }) ?? null;
++  }
++
++  waitFor(method, {
++    threadId = null,
++    turnId = null,
++    startIndex = 0,
++    timeoutMs = 600_000,
++  } = {}) {
++    const existing = this.find(method, { threadId, turnId, startIndex });
++    if (existing) return Promise.resolve(existing);
++
++    return new Promise((resolve, reject) => {
++      const timer = setTimeout(() => {
++        this.off("notification", listener);
++        reject(Object.assign(new Error(`notification timed out: ${method}`), {
++          code: "NOTIFICATION_TIMEOUT",
++          details: { method, threadId, turnId, timeoutMs },
++        }));
++      }, timeoutMs);
++      timer.unref?.();
++      const listener = (entry) => {
++        if (entry.index < startIndex || entry.method !== method) return;
++        if (threadId && threadIdOf(entry) !== threadId) return;
++        if (turnId && turnIdOf(entry) !== turnId) return;
++        clearTimeout(timer);
++        this.off("notification", listener);
++        resolve(entry);
++      };
++      this.on("notification", listener);
++    });
++  }
++
++  counts(entries = this.notifications) {
++    const counts = {};
++    for (const entry of entries) counts[entry.method] = (counts[entry.method] ?? 0) + 1;
++    return counts;
++  }
++}
++
++export function notificationThreadId(entry) {
++  return threadIdOf(entry);
++}
++
++export function notificationTurnId(entry) {
++  return turnIdOf(entry);
++}
+diff --git a/packages/codex-app-server-adapter/src/index.js b/packages/codex-app-server-adapter/src/index.js
+new file mode 100644
+index 0000000..d2cff78
+--- /dev/null
++++ b/packages/codex-app-server-adapter/src/index.js
+@@ -0,0 +1,16 @@
++export { CodexAppServerAdapter } from "./client.js";
++export { EventCollector, notificationThreadId, notificationTurnId } from "./event-collector.js";
++export { JsonlProtocolError, JsonlRpcError, JsonlTransport } from "./jsonl-transport.js";
++export { CodexAppServerProcess, discoverCodexVersion, generateProtocolSchema } from "./process-manager.js";
++export { assertRequiredProtocolSurface, digestProtocolSchema, safeVersionSegment, writeProtocolManifest } from "./protocol-schema.js";
++export {
++  TURN_OUTPUT_SCHEMA,
++  artifactRefForFile,
++  assertNoCredentialLeak,
++  canonicalJson,
++  parseStructuredResultFromEvents,
++  sanitizeValue,
++  sha256Bytes,
++  validateSchema,
++} from "./turn-output.js";
++export { runLiveTwoTurnCertification } from "./certify.js";
+diff --git a/packages/codex-app-server-adapter/src/jsonl-transport.js b/packages/codex-app-server-adapter/src/jsonl-transport.js
+new file mode 100644
+index 0000000..f758311
+--- /dev/null
++++ b/packages/codex-app-server-adapter/src/jsonl-transport.js
+@@ -0,0 +1,228 @@
++import { EventEmitter } from "node:events";
++import { createInterface } from "node:readline";
++import { setTimeout as sleep } from "node:timers/promises";
++
++export class JsonlRpcError extends Error {
++  constructor(message, { code = null, data = null, method = null } = {}) {
++    super(message);
++    this.name = "JsonlRpcError";
++    this.code = code;
++    this.data = data;
++    this.method = method;
++  }
++}
++
++export class JsonlProtocolError extends Error {
++  constructor(message, details = {}) {
++    super(message);
++    this.name = "JsonlProtocolError";
++    this.details = details;
++  }
++}
++
++function timestamp() {
++  return new Date().toISOString();
++}
++
++function boundedJitter(attempt, baseMs, maxMs) {
++  const exponential = Math.min(maxMs, baseMs * (2 ** attempt));
++  const jitter = Math.floor(exponential * 0.2 * Math.random());
++  return exponential + jitter;
++}
++
++export class JsonlTransport extends EventEmitter {
++  constructor({
++    stdin,
++    stdout,
++    stderr = null,
++    requestTimeoutMs = 30_000,
++    overloadRetries = 4,
++    overloadBaseDelayMs = 100,
++    overloadMaxDelayMs = 2_000,
++  }) {
++    super();
++    if (!stdin || !stdout) throw new TypeError("stdin and stdout are required");
++    this.stdin = stdin;
++    this.stdout = stdout;
++    this.stderr = stderr;
++    this.requestTimeoutMs = requestTimeoutMs;
++    this.overloadRetries = overloadRetries;
++    this.overloadBaseDelayMs = overloadBaseDelayMs;
++    this.overloadMaxDelayMs = overloadMaxDelayMs;
++    this.nextId = 1;
++    this.pending = new Map();
++    this.trace = [];
++    this.stderrLines = [];
++    this.closed = false;
++    this.started = false;
++    this.stdoutInterface = null;
++    this.stderrInterface = null;
++  }
++
++  start() {
++    if (this.started) return;
++    this.started = true;
++    this.stdoutInterface = createInterface({ input: this.stdout, crlfDelay: Infinity });
++    this.stdoutInterface.on("line", (line) => this.#handleStdoutLine(line));
++    this.stdoutInterface.on("close", () => {
++      if (!this.closed) this.failAll(new JsonlProtocolError("app-server stdout closed"));
++    });
++
++    if (this.stderr) {
++      this.stderrInterface = createInterface({ input: this.stderr, crlfDelay: Infinity });
++      this.stderrInterface.on("line", (line) => {
++        this.stderrLines.push({ at: timestamp(), line: String(line) });
++        this.emit("stderr", String(line));
++      });
++    }
++  }
++
++  snapshotTrace(startIndex = 0) {
++    return structuredClone(this.trace.slice(startIndex));
++  }
++
++  snapshotStderr(startIndex = 0) {
++    return structuredClone(this.stderrLines.slice(startIndex));
++  }
++
++  async request(method, params = {}, options = {}) {
++    const retries = options.overloadRetries ?? this.overloadRetries;
++    let lastError = null;
++    for (let attempt = 0; attempt <= retries; attempt += 1) {
++      try {
++        return await this.#requestOnce(method, params, options);
++      } catch (error) {
++        lastError = error;
++        if (!(error instanceof JsonlRpcError) || error.code !== -32001 || attempt >= retries) {
++          throw error;
++        }
++        this.emit("overloadRetry", { method, attempt: attempt + 1, error });
++        await sleep(boundedJitter(
++          attempt,
++          options.overloadBaseDelayMs ?? this.overloadBaseDelayMs,
++          options.overloadMaxDelayMs ?? this.overloadMaxDelayMs,
++        ));
++      }
++    }
++    throw lastError;
++  }
++
++  #requestOnce(method, params, options) {
++    if (this.closed) return Promise.reject(new JsonlProtocolError("transport is closed"));
++    const id = this.nextId;
++    this.nextId += 1;
++    const message = { id, method, params };
++    const timeoutMs = options.timeoutMs ?? this.requestTimeoutMs;
++
++    return new Promise((resolve, reject) => {
++      const timer = setTimeout(() => {
++        this.pending.delete(String(id));
++        reject(new JsonlProtocolError(`request timed out: ${method}`, { id, method, timeoutMs }));
++      }, timeoutMs);
++      timer.unref?.();
++      this.pending.set(String(id), { resolve, reject, timer, method });
++      try {
++        this.#write(message, "request");
++      } catch (error) {
++        clearTimeout(timer);
++        this.pending.delete(String(id));
++        reject(error);
++      }
++    });
++  }
++
++  notify(method, params = undefined) {
++    if (this.closed) throw new JsonlProtocolError("transport is closed");
++    const message = params === undefined ? { method } : { method, params };
++    this.#write(message, "notification");
++  }
++
++  respondResult(id, result = {}) {
++    if (this.closed) return;
++    this.#write({ id, result }, "response");
++  }
++
++  respondError(id, { code = -32000, message = "request denied", data = undefined } = {}) {
++    if (this.closed) return;
++    const error = data === undefined ? { code, message } : { code, message, data };
++    this.#write({ id, error }, "response");
++  }
++
++  #write(message, kind) {
