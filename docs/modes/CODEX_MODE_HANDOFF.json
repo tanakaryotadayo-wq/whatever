@@ -1,0 +1,127 @@
+{
+  "schema": "akashic.codex-mode-handoff/v1",
+  "mode_id": "codex-mode",
+  "mode_version": "1.2.0",
+  "handoff_id": "codex-provider-certification-20260816T054500Z",
+  "created_at": "2026-08-16T05:45:00Z",
+  "workstream_id": "official-codex-app-server-live-two-turn",
+  "projection": "BLOCKED",
+  "current_role": "SUPERVISOR",
+  "source_snapshot": {
+    "repository": "tanakaryotadayo-wq/whatever",
+    "reconciled_against_main_head": "0ef4e0daec408e7d812c6c848e999463e1c299e7",
+    "provider_branch": "akashic/v0.10-codex-app-server-live",
+    "provider_head": "e18e72df2460f5c7921b359b33857418d873ed27",
+    "provider_pull_request": 15
+  },
+  "work_packet": {
+    "goal": "Produce a machine-readable receipt proving exactly three consecutive official Codex App Server same-thread two-turn PASS runs on one Codex version.",
+    "scope": [
+      "Diagnose retained GitHub Models/provider failure evidence before any retry.",
+      "Run only on a credentialed official Codex runtime.",
+      "Preserve one thread/start and two turn/start calls with delta-only turn 2.",
+      "Record sanitized protocol, exact artifact bytes, digests, tests and receipt."
+    ],
+    "definition_of_done": [
+      "Three consecutive PASS runs use one official Codex version.",
+      "Each run has one thread and two turns on the same thread.",
+      "Turn 1 is INPUT_REQUIRED; turn 2 is COMPLETED.",
+      "Task Capsule is not resent on turn 2.",
+      "Artifact bytes, digest and size match.",
+      "No credential-like material appears in Evidence.",
+      "Canonical CI remains green.",
+      "PR #15 leaves Draft only after the valid receipt exists.",
+      "Drive Evidence and GitHub State/Handoff are updated."
+    ],
+    "out_of_scope": [
+      "App Server process restart/thread resume",
+      "Temporal or Vercel production wiring",
+      "Workflow Authority selection",
+      "New Agent framework or TaskStore"
+    ],
+    "authority": {
+      "source": "GitHub",
+      "artifact_evidence": "Google Drive",
+      "provider_runtime": "official Codex App Server"
+    },
+    "expected_heads": {
+      "main_relation": "ANCESTOR_OR_EQUAL",
+      "main_reconciled_head": "0ef4e0daec408e7d812c6c848e999463e1c299e7",
+      "provider_branch": "akashic/v0.10-codex-app-server-live",
+      "provider_head_at_handoff": "e18e72df2460f5c7921b359b33857418d873ed27"
+    },
+    "allowed_paths": [
+      "packages/codex-app-server-adapter/**",
+      "fixtures/codex-live-two-turn/**",
+      "scripts/codex-app-server-live-three.mjs",
+      ".github/workflows/codex-*.yml",
+      "evidence/codex-*/**",
+      "docs/modes/**",
+      "docs/ADR-*.md"
+    ],
+    "protected_paths": [
+      "Do not weaken exact-three certification.",
+      "Do not auto-approve provider approval requests.",
+      "Do not write credentials to source or Evidence.",
+      "Do not mark PR #15 ready without a valid receipt."
+    ],
+    "evidence_required": [
+      "official binary version",
+      "generated protocol schema digest",
+      "sanitized protocol trace",
+      "three-run certification receipt",
+      "canonical CI result",
+      "Drive artifact refs"
+    ],
+    "do_not_repeat_without_change": [
+      "GitHub-hosted macOS probe without repository-scoped credential",
+      "GitHub Models gpt-4.1 with the same provider configuration",
+      "GitHub Models wire matrix with the same model/wire inputs"
+    ]
+  },
+  "attempt_ledger": [
+    {
+      "attempt_id": "github-hosted-macos-probe",
+      "status": "BLOCKED",
+      "resume_condition": "credentialed official runtime becomes available"
+    },
+    {
+      "attempt_id": "github-models-gpt-4.1",
+      "status": "FAILED",
+      "resume_condition": "protocol/provider diagnosis changes hypothesis"
+    },
+    {
+      "attempt_id": "github-models-wire-matrix",
+      "status": "FAILED",
+      "resume_condition": "new compatibility evidence changes inputs"
+    }
+  ],
+  "next_action": {
+    "action_id": "diagnose-failed-provider-attempts",
+    "role": "SUPERVISOR",
+    "assistant_executable_now": true,
+    "instruction": "Read retained failure logs and protocol evidence, produce one falsifiable compatibility hypothesis, and do not rerun until an input or hypothesis changes."
+  },
+  "executor_return_contract": {
+    "required": [
+      "files_changed",
+      "commands_run",
+      "test_results",
+      "artifact_refs",
+      "remaining_risks",
+      "dod_check",
+      "next_recommended_action"
+    ]
+  },
+  "verification": {
+    "verdict": "BLOCKED",
+    "reason": "No credentialed official runtime and no valid three-run receipt.",
+    "adoption_allowed": false
+  },
+  "evidence_refs": [
+    "evidence/codex-hosted-probe/latest.json",
+    "evidence/codex-github-models/latest.json",
+    "evidence/codex-github-models-matrix/latest.json",
+    "https://drive.google.com/drive/folders/1IptDk7ePL2wUWXcLAVal8YtwiwCZgLew"
+  ]
+}
