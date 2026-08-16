@@ -1,0 +1,112 @@
+{
+  "artifact_digests": {
+    "adoption_receipt": "sha256:fd86d997f7782d9f9d194eee288990211580c14eefa04ed419dc872e38c2171c",
+    "candidate": "sha256:c2de4a3e4deec57e5458a7279967e1c810244a1708491730e57cf695e1c215c9",
+    "compiled_context": "sha256:5126c1909d8b2af654697f28fc88c4bf1d771e9ca0079985148f1d89cd4b853c",
+    "context_delta": "sha256:c1d9119ee2181f5e0c40fbc05e371ff67459920bd05a4b75b3e46548eb1cf642",
+    "provenance": "sha256:e0f91af31295cbfa21ed1884d1a526ba5bf5e1d127f14194bc75193829a85beb",
+    "verification_report": "sha256:da9c63ec9e4f374da47788399f52256e5c54af9952b60c14f7c9d02c23fc5c4a"
+  },
+  "backend": "vercel-workflow",
+  "checks": {
+    "active_duplicate_submit_idempotent": true,
+    "adoption_present": true,
+    "completed": true,
+    "context_seq_advanced": true,
+    "input_required": true,
+    "provenance_present": true,
+    "same_run_resumed": true,
+    "stale_rejected": true,
+    "two_turns": true,
+    "valid_delta_accepted": true,
+    "verification_present": true
+  },
+  "deployment": {
+    "build_state": "READY",
+    "compiled_steps": 10,
+    "compiled_workflows": 1,
+    "deployment_id": "dpl_H2pbBFVqqHBpRPmZURgg4MYHEg7z",
+    "production_alias": "https://akashic-vercel-canonical-p0.vercel.app",
+    "project_id": "prj_MzcJ1wlSYF1H9uolbeLemskxf0s4",
+    "team_id": "team_dMxLScB8l5g1D4gFJMWEkFp8"
+  },
+  "effect": {
+    "effect_key": "effect:v1:4ce8e1d6152ab4feda5ff76ff4c62197074a2a11cfb25652392606cb30452fdd",
+    "generation": 1,
+    "idempotency_key": "step_01M045H8PPHWWPF7TCF311V1N6"
+  },
+  "run": {
+    "active_duplicate": {
+      "idempotent_replay": true,
+      "owner_registration": "existing",
+      "run_id": "wrun_01M045H7JGMDAH8ZK5CAS1YBCS"
+    },
+    "completed_at": "2026-08-16T02:13:53.458Z",
+    "context_id": "ctx-979be885-ce33-43b2-b9dd-9b1dc5b20ce1",
+    "logical_attempt_id": "attempt-979be885-ce33-43b2-b9dd-9b1dc5b20ce1",
+    "run_id": "wrun_01M045H7JGMDAH8ZK5CAS1YBCS",
+    "stale_rejection": {
+      "code": "STALE_SEQUENCE",
+      "message": "delta expected_seq is stale"
+    },
+    "started_at": "2026-08-16T02:13:40.462Z",
+    "submission_digest": "sha256:b4b46eb4670642c37bcacbc8df46416c013aaea9e8b08bdd3f17975f64874c09",
+    "task_id": "vercel-live-979be885-ce33-43b2-b9dd-9b1dc5b20ce1",
+    "terminal": {
+      "context_seq": 1,
+      "poll_attempts": 17,
+      "state": "COMPLETED",
+      "state_seq": 9,
+      "terminal": true,
+      "turn_no": 2
+    },
+    "valid_delta": {
+      "accepted": true,
+      "delta_id": "valid-979be885-ce33-43b2-b9dd-9b1dc5b20ce1",
+      "expected_applied_context_seq": 1,
+      "hook_attempts": 1,
+      "same_run": true
+    },
+    "waiting": {
+      "context_seq": 0,
+      "poll_attempts": 7,
+      "request_id": "need:vercel-live-979be885-ce33-43b2-b9dd-9b1dc5b20ce1:1",
+      "state": "INPUT_REQUIRED",
+      "state_seq": 4
+    }
+  },
+  "runtime_log_evidence": [
+    "compileContext START/DONE",
+    "runAgentTurn turn=1 START",
+    "mergeContextDelta START/DONE",
+    "runAgentTurn turn=2 START/DONE",
+    "verifyCandidate START/DONE",
+    "adoptArtifact START/DONE",
+    "all workflow flow/step endpoints returned HTTP 200"
+  ],
+  "schema": "akashic.live-acceptance-evidence/v1",
+  "scope": {
+    "does_not_prove": [
+      "official Codex provider live two-turn",
+      "real Google Drive upload/projection",
+      "post-terminal task-id result reuse",
+      "Vercel selected as final Workflow Authority"
+    ],
+    "proves": [
+      "live Vercel durable workflow execution",
+      "INPUT_REQUIRED wait",
+      "CAS stale rejection",
+      "same-run context resume",
+      "two-turn completion",
+      "verification/provenance/adoption pipeline",
+      "active-run duplicate suppression"
+    ]
+  },
+  "source": {
+    "branch": "akashic/v0.9-vercel-live-acceptance",
+    "commit": "b15973a77abb14e078f8fe1567da035740e93ea9",
+    "repository": "tanakaryotadayo-wq/whatever"
+  },
+  "status": "PASS",
+  "workflow_sdk": "workflow@4.6.0"
+}
