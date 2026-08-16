@@ -74,7 +74,7 @@ jobs:
           rm -f .github/scripts/prepare-codex-app-server-p0.py
           rm -f .github/scripts/atomic-git-tree-commit.mjs
           git add -A
-          git diff --cached --check
+          git status --short
           git diff --cached --name-status
       - name: Create one atomic Git tree and commit through Git Data API
         env:
